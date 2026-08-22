@@ -7,11 +7,12 @@ local isLoadedLogged = false
 
 -- Shared memory untuk mengirim data telemetri ke UI
 local shared = ac.connect({
+    key = ac.StructItem.key('HallConfig_Telemetry_v1'),
     rawGas = ac.StructItem.float(),
     processedGas = ac.StructItem.float(),
     rawBrake = ac.StructItem.float(),
     processedBrake = ac.StructItem.float()
-})
+}, true)
 
 local gasProcessor = signal.create()
 local brakeProcessor = signal.create()
@@ -26,6 +27,10 @@ function script.update(dt)
 
     -- Reload config secara periodik (0.5s) agar live tuning dari UI bekerja
     config.reload(dt)
+
+    -- Simpan nilai raw sebelum di-process
+    local rawGas = data.gas
+    local rawBrake = data.brake
 
     -- 1. Signal Processing
     data.gas = gasProcessor.process(data.gas, dt)
