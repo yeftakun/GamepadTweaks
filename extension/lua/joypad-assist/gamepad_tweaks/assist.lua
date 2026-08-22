@@ -7,7 +7,7 @@ local isLoadedLogged = false
 
 -- Shared memory untuk mengirim data telemetri ke UI
 local shared = ac.connect({
-    key = ac.StructItem.key('HallConfig_Telemetry_v1'),
+    key = ac.StructItem.key('GamepadTweaks_Telemetry_v1'),
     rawGas = ac.StructItem.float(),
     processedGas = ac.StructItem.float(),
     rawBrake = ac.StructItem.float(),
@@ -21,7 +21,7 @@ function script.update(dt)
     local data = ac.getJoypadState()
 
     if not isLoadedLogged then
-        ac.log("HallConfig: Phase 3 (Live UI Config) Loaded!")
+        ac.log("GamepadTweaks: Phase 3 (Live UI Config) Loaded!")
         isLoadedLogged = true
     end
 
@@ -57,5 +57,5 @@ function script.reset()
     if data then
         vibration.reset(data)
     end
-    ac.log("HallConfig: reset() called, state cleared.")
+    ac.log("GamepadTweaks: reset() called, state cleared.")
 end

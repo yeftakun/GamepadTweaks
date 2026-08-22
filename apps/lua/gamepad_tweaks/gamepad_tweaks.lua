@@ -1,7 +1,7 @@
-local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/hall_config.ini'
+local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/gamepad_tweaks.ini'
 
 local shared = ac.connect({
-    key = ac.StructItem.key('HallConfig_Telemetry_v1'),
+    key = ac.StructItem.key('GamepadTweaks_Telemetry_v1'),
     rawGas = ac.StructItem.float(),
     processedGas = ac.StructItem.float(),
     rawBrake = ac.StructItem.float(),

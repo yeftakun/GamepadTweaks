@@ -1,4 +1,4 @@
-local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/hall_config.ini'
+local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/gamepad_tweaks.ini'
 
 local state = {
     global = {
