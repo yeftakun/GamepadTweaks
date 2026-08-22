@@ -10,8 +10,8 @@ local state = {
     smoothingTimeConstant = 0.015,
 
     vibRTEnable = true,
-    vibRTMotor = 1,   -- 1=right, 0=left
-    vibRTMode = 0,    -- 0=proportional, 1=static
+    vibRTMotor = 1,
+    vibRTMode = 0,
     vibRTMax = 80,
 
     vibLTEnable = true,
@@ -20,7 +20,6 @@ local state = {
     vibLTMax = 80
 }
 
--- Load config dari file INI (jika ada)
 local function loadConfig()
     local cfg = ac.INIConfig.load(cfgPath)
     state.hysteresisEnable = cfg:get('HYSTERESIS', 'ENABLE', true)
@@ -38,7 +37,6 @@ local function loadConfig()
     state.vibLTMax = cfg:get('VIBRATION_LT', 'MAX', 80)
 end
 
--- Save config ke file INI
 local function saveConfig()
     local cfg = ac.INIConfig.load(cfgPath)
     cfg:set('HYSTERESIS', 'ENABLE', state.hysteresisEnable)
@@ -57,12 +55,15 @@ local function saveConfig()
     cfg:save(cfgPath)
 end
 
--- Load config saat script start
 loadConfig()
 
--- Helper: dropdown motor
 local motorLabels = { [0] = "Left (Low Freq)", [1] = "Right (High Freq)" }
 local modeLabels = { [0] = "Proportional", [1] = "Static" }
+
+-- Variables for AutoSave (Debounce)
+local needsSave = false
+local saveDelayTimer = 0.0
+local alertTimer = 0.0
 
 function windowMain(dt)
     local dirty = false
@@ -134,8 +135,28 @@ function windowMain(dt)
     val, changed = ui.slider("##lt_max", state.vibLTMax, 0, 100, "Max Vibration: %.0f%%")
     if changed then state.vibLTMax = val; dirty = true end
 
-    -- Save hanya ketika ada perubahan
+    -- === AutoSave Logic ===
+    -- Jika ada pergerakan slider/checkbox, mulai ulang timer 0.5 detik
     if dirty then
-        saveConfig()
+        needsSave = true
+        saveDelayTimer = 0.5
+    end
+
+    -- Hitung mundur timer save
+    if needsSave then
+        saveDelayTimer = saveDelayTimer - dt
+        if saveDelayTimer <= 0 then
+            saveConfig()
+            needsSave = false
+            alertTimer = 3.0 -- Tampilkan alert "Saved" selama 3 detik
+        end
+    end
+
+    -- === Alert Message ===
+    if alertTimer > 0 then
+        alertTimer = alertTimer - dt
+        ui.separator()
+        -- Tampilkan teks berwarna hijau
+        ui.textColored(rgbm(0.2, 1.0, 0.2, 1.0), "Saved")
     end
 end
