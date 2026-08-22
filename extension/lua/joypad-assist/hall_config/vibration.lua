@@ -15,20 +15,21 @@ local function getMotorValue(processedOutput, axisConfig)
 end
 
 local function apply(data)
+    local cfg = config.state
     local leftMotor = 0.0
     local rightMotor = 0.0
 
     -- 1. Evaluasi kebutuhan motor untuk RT (Gas)
-    local rtValue = getMotorValue(data.gas, config.vibrationRT)
-    if config.vibrationRT.motor == "left" then
+    local rtValue = getMotorValue(data.gas, cfg.vibrationRT)
+    if cfg.vibrationRT.motor == "left" then
         leftMotor = math.max(leftMotor, rtValue)
     else
         rightMotor = math.max(rightMotor, rtValue)
     end
 
     -- 2. Evaluasi kebutuhan motor untuk LT (Brake)
-    local ltValue = getMotorValue(data.brake, config.vibrationLT)
-    if config.vibrationLT.motor == "left" then
+    local ltValue = getMotorValue(data.brake, cfg.vibrationLT)
+    if cfg.vibrationLT.motor == "left" then
         leftMotor = math.max(leftMotor, ltValue)
     else
         rightMotor = math.max(rightMotor, ltValue)

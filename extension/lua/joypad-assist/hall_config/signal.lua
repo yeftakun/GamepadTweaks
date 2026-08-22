@@ -8,26 +8,30 @@ local function createProcessor()
 
     local function process(raw, dt)
         local processed = raw
+        local cfg = config.state -- Ambil state terbaru dari config
 
         -- 1. Hysteresis Deadzone Remap
-        if config.hysteresisEnable then
-            if not state.active and processed > config.hysteresisThresholdUp then 
+        if cfg.hysteresisEnable then
+            if not state.active and processed > cfg.hysteresisThresholdUp then 
                 state.active = true
-            elseif state.active and processed < config.hysteresisThresholdDown then 
+            elseif state.active and processed < cfg.hysteresisThresholdDown then 
                 state.active = false 
             end
             
             if not state.active then 
                 processed = 0.0 
             else
-                processed = (processed - config.hysteresisThresholdDown) / (1.0 - config.hysteresisThresholdDown)
+                processed = (processed - cfg.hysteresisThresholdDown) / (1.0 - cfg.hysteresisThresholdDown)
             end
         end
 
         -- 2. Smoothing (EMA dt-normalized)
-        if config.smoothingEnable then
-            local factor = 1 - math.exp(-dt / config.smoothingTimeConstant)
-            processed = state.prevSmoothed + (processed - state.prevSmoothed) * factor
+        if cfg.smoothingEnable then
+            -- Mencegah pembagian dengan nol jika time constant diatur ke 0
+            if cfg.smoothingTimeConstant > 0.001 then
+                local factor = 1 - math.exp(-dt / cfg.smoothingTimeConstant)
+                processed = state.prevSmoothed + (processed - state.prevSmoothed) * factor
+            end
             state.prevSmoothed = processed
         else
             state.prevSmoothed = processed
