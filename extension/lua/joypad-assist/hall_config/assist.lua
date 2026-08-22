@@ -14,8 +14,8 @@ local shared = ac.connect({
     processedBrake = ac.StructItem.float()
 }, true)
 
-local gasProcessor = signal.create()
-local brakeProcessor = signal.create()
+local gasProcessor = signal.create('rt')
+local brakeProcessor = signal.create('lt')
 
 function script.update(dt)
     local data = ac.getJoypadState()

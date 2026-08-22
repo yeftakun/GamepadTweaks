@@ -1,6 +1,6 @@
 local config = require('config')
 
-local function createProcessor()
+local function createProcessor(triggerId)
     local state = {
         active = false,
         prevSmoothed = 0.0
@@ -8,7 +8,7 @@ local function createProcessor()
 
     local function process(raw, dt)
         local processed = raw
-        local cfg = config.state -- Ambil state terbaru dari config
+        local cfg = config.state[triggerId] -- Ambil state terbaru dari config ("rt" atau "lt")
 
         -- 1. Hysteresis Deadzone Remap
         if cfg.hysteresisEnable then
