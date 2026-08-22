@@ -21,7 +21,9 @@ local function createProcessor(triggerId)
             if not state.active then 
                 processed = 0.0 
             else
-                processed = (processed - cfg.hysteresisThresholdDown) / (1.0 - cfg.hysteresisThresholdDown)
+                local denom = 1.0 - cfg.hysteresisThresholdDown
+                if denom < 0.001 then denom = 0.001 end
+                processed = (processed - cfg.hysteresisThresholdDown) / denom
             end
         end
 

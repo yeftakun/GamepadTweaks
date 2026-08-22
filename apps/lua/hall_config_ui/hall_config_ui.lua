@@ -99,10 +99,24 @@ function windowMain(dt)
     end
 
     val, changed = ui.slider("##hyst_up", ts.hysteresisThresholdUp, 0.0, 1.0, "Threshold Up: %.2f")
-    if changed then ts.hysteresisThresholdUp = val; dirty = true end
+    if changed then 
+        ts.hysteresisThresholdUp = val
+        -- Paksa Threshold Down agar tidak lebih besar dari Threshold Up
+        if ts.hysteresisThresholdDown > val then
+            ts.hysteresisThresholdDown = val
+        end
+        dirty = true 
+    end
 
     val, changed = ui.slider("##hyst_down", ts.hysteresisThresholdDown, 0.0, 1.0, "Threshold Down: %.2f")
-    if changed then ts.hysteresisThresholdDown = val; dirty = true end
+    if changed then 
+        ts.hysteresisThresholdDown = val
+        -- Paksa Threshold Up agar tidak lebih kecil dari Threshold Down
+        if ts.hysteresisThresholdUp < val then
+            ts.hysteresisThresholdUp = val
+        end
+        dirty = true 
+    end
 
     -- === Smoothing ===
     ui.separator()
