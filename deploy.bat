@@ -4,14 +4,14 @@ setlocal
 set "REPO=D:\code\HallConfig-gamepadfx"
 set "AC=D:\SteamLibrary\steamapps\common\assettocorsa"
 
-set "SRC_SCRIPT=%REPO%\extension\lua\joypad-assist\hall_config"
-set "DST_SCRIPT=%AC%\extension\lua\joypad-assist\hall_config"
+set "SRC_SCRIPT=%REPO%\extension\lua\joypad-assist\gamepad_tweaks"
+set "DST_SCRIPT=%AC%\extension\lua\joypad-assist\gamepad_tweaks"
 
-set "SRC_UI=%REPO%\apps\lua\hall_config_ui"
-set "DST_UI=%AC%\apps\lua\hall_config_ui"
+set "SRC_UI=%REPO%\apps\lua\gamepad_tweaks"
+set "DST_UI=%AC%\apps\lua\gamepad_tweaks"
 
 echo ===============================================
-echo   hall_config - Deploy to Assetto Corsa
+echo   gamepad_tweaks - Deploy to Assetto Corsa
 echo ===============================================
 echo Repo:   %REPO%
 echo Target: %AC%
