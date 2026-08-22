@@ -4,6 +4,16 @@ local state = {
     global = {
         nativeVibrationMultiplier = 1.0
     },
+    effects = {
+        slip = 1.0,
+        kerb = 1.0,
+        abs = 1.0,
+        collision = 1.0,
+        gforce = 1.0,
+        offroad = 1.0,
+        engine = 1.0,
+        gearshift = 1.0
+    },
     rt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
@@ -39,6 +49,16 @@ local function reload(dt)
         timer = 0
         local cfg = ac.INIConfig.load(cfgPath)
         state.global.nativeVibrationMultiplier = cfg:get('GLOBAL', 'NATIVE_MULTIPLIER', 1.0)
+        
+        state.effects.slip = cfg:get('EFFECTS', 'SLIP', 1.0)
+        state.effects.kerb = cfg:get('EFFECTS', 'KERB', 1.0)
+        state.effects.abs = cfg:get('EFFECTS', 'ABS', 1.0)
+        state.effects.collision = cfg:get('EFFECTS', 'COLLISION', 1.0)
+        state.effects.gforce = cfg:get('EFFECTS', 'GFORCE', 1.0)
+        state.effects.offroad = cfg:get('EFFECTS', 'OFFROAD', 1.0)
+        state.effects.engine = cfg:get('EFFECTS', 'ENGINE', 1.0)
+        state.effects.gearshift = cfg:get('EFFECTS', 'GEARSHIFT', 1.0)
+        
         loadTrigger(cfg, 'RT', state.rt)
         loadTrigger(cfg, 'LT', state.lt)
     end

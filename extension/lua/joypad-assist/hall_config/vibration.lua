@@ -15,35 +15,84 @@ local function getMotorValue(processedOutput, axisConfig)
     end
 end
 
+local localState = {
+    lastGear = 0,
+    gearJolt = 0.0
+}
+
 local function getNativeVibration(data, multiplier)
     if multiplier <= 0.0 then return 0.0, 0.0 end
+    
+    local eff = config.state.effects
+    local car = ac.getCarState(1)
 
-    -- Menghitung getaran native persis seperti skrip default CSP (race/drift.lua)
+    -- 1. SLIP (Ban Selip)
     local slipL = math.max(0, data.ndSlipL or 0)
     local slipR = math.max(0, data.ndSlipR or 0)
     local rumbleEffects = data.rumbleEffects or 1.0
     
-    local slipForceL = ((math.ceil(slipL * 10) ^ 0.3) - 1) * ((1 + slipL) ^ 0.3) * rumbleEffects * 0.01
-    local slipForceR = ((math.ceil(slipR * 10) ^ 0.3) - 1) * ((1 + slipR) ^ 0.3) * rumbleEffects * 0.01
-
-    -- Hindari hasil NaN jika perhitungan ^0.3 error
+    local slipForceL = ((math.ceil(slipL * 10) ^ 0.3) - 1) * ((1 + slipL) ^ 0.3) * rumbleEffects * 0.01 * eff.slip
+    local slipForceR = ((math.ceil(slipR * 10) ^ 0.3) - 1) * ((1 + slipR) ^ 0.3) * rumbleEffects * 0.01 * eff.slip
     if slipForceL ~= slipForceL or slipForceL < 0 then slipForceL = 0 end
     if slipForceR ~= slipForceR or slipForceR < 0 then slipForceR = 0 end
 
-    -- Tambahkan getaran jalanan (kerbs/surface)
+    -- 2. KERBS / ROAD (Permukaan Jalan)
     local speedFactor = math.max(0, math.min(1.0, (data.speedKmh or 0) / 100))
-    local surfL = speedFactor * (data.surfaceVibrationGainLeft or 0) / 20
-    local surfR = speedFactor * (data.surfaceVibrationGainRight or 0) / 20
+    local surfL = speedFactor * (data.surfaceVibrationGainLeft or 0) / 20 * eff.kerb
+    local surfR = speedFactor * (data.surfaceVibrationGainRight or 0) / 20 * eff.kerb
 
-    -- INJEKSI GETARAN ABS DARI PHYSICS STATE
+    -- 3. ABS (Rem Mengunci)
     local absVib = 0.0
-    local car = ac.getCarState(1)
     if car and car.absInAction then
-        absVib = 0.6 -- Beri getaran dasar 60% jika ABS menyala
+        absVib = 0.6 * eff.abs
     end
 
-    local totalL = (slipForceL + surfL + absVib) * multiplier
-    local totalR = (slipForceR + surfR + absVib) * multiplier
+    -- 4. COLLISION (Tabrakan)
+    local colVib = 0.0
+    if car and car.collisionDepth > 0.01 then
+        colVib = 1.0 * eff.collision
+    end
+
+    -- 5. G-FORCE (Guncangan/Suspensi mentok)
+    local gVib = 0.0
+    if data.gForces then
+        local gLoad = math.abs(data.gForces.y) + math.abs(data.gForces.x)
+        if gLoad > 1.5 then
+            gVib = (gLoad - 1.5) * 0.1 * eff.gforce
+        end
+    end
+
+    -- 6. OFF-ROAD (Keluar Trek / Rumput / Gravel)
+    local offroadVib = 0.0
+    if car and not car.surfaceValidTrack then
+        -- Jika keluar trek, tambah getaran ekstra
+        offroadVib = speedFactor * 0.3 * eff.offroad
+    end
+
+    -- 7. ENGINE RPM
+    local engineVib = 0.0
+    if car and car.rpmMax > 0 then
+        local rpmRatio = car.rpm / car.rpmMax
+        if rpmRatio > 0.85 then -- Mendekati redline
+            engineVib = (rpmRatio - 0.85) * 1.5 * eff.engine
+        end
+    end
+
+    -- 8. GEARSHIFT (Sentakan Gigi)
+    local gearVib = 0.0
+    if car then
+        if localState.lastGear ~= car.gear then
+            localState.gearJolt = 0.8 -- Spike getaran 80%
+            localState.lastGear = car.gear
+        end
+        if localState.gearJolt > 0 then
+            gearVib = localState.gearJolt * eff.gearshift
+            localState.gearJolt = localState.gearJolt - 0.05 -- Pelan-pelan mereda
+        end
+    end
+
+    local totalL = (slipForceL + surfL + absVib + colVib + gVib + offroadVib + engineVib + gearVib) * multiplier
+    local totalR = (slipForceR + surfR + absVib + colVib + gVib + offroadVib + engineVib + gearVib) * multiplier
 
     return totalL, totalR
 end
