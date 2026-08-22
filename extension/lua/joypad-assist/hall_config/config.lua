@@ -5,14 +5,14 @@ local state = {
         nativeVibrationMultiplier = 1.0
     },
     effects = {
-        slip = 1.0,
-        kerb = 1.0,
-        abs = 1.0,
-        collision = 1.0,
-        gforce = 1.0,
-        offroad = 1.0,
-        engine = 1.0,
-        gearshift = 1.0
+        slip = { mult = 1.0, motor = 2 },
+        kerb = { mult = 1.0, motor = 2 },
+        abs = { mult = 1.0, motor = 2 },
+        collision = { mult = 1.0, motor = 2 },
+        gforce = { mult = 1.0, motor = 2 },
+        offroad = { mult = 1.0, motor = 2 },
+        engine = { mult = 1.0, motor = 2 },
+        gearshift = { mult = 1.0, motor = 2 }
     },
     rt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
@@ -50,14 +50,23 @@ local function reload(dt)
         local cfg = ac.INIConfig.load(cfgPath)
         state.global.nativeVibrationMultiplier = cfg:get('GLOBAL', 'NATIVE_MULTIPLIER', 1.0)
         
-        state.effects.slip = cfg:get('EFFECTS', 'SLIP', 1.0)
-        state.effects.kerb = cfg:get('EFFECTS', 'KERB', 1.0)
-        state.effects.abs = cfg:get('EFFECTS', 'ABS', 1.0)
-        state.effects.collision = cfg:get('EFFECTS', 'COLLISION', 1.0)
-        state.effects.gforce = cfg:get('EFFECTS', 'GFORCE', 1.0)
-        state.effects.offroad = cfg:get('EFFECTS', 'OFFROAD', 1.0)
-        state.effects.engine = cfg:get('EFFECTS', 'ENGINE', 1.0)
-        state.effects.gearshift = cfg:get('EFFECTS', 'GEARSHIFT', 1.0)
+        state.effects.slip.mult = cfg:get('EFFECTS', 'SLIP', 1.0)
+        state.effects.kerb.mult = cfg:get('EFFECTS', 'KERB', 1.0)
+        state.effects.abs.mult = cfg:get('EFFECTS', 'ABS', 1.0)
+        state.effects.collision.mult = cfg:get('EFFECTS', 'COLLISION', 1.0)
+        state.effects.gforce.mult = cfg:get('EFFECTS', 'GFORCE', 1.0)
+        state.effects.offroad.mult = cfg:get('EFFECTS', 'OFFROAD', 1.0)
+        state.effects.engine.mult = cfg:get('EFFECTS', 'ENGINE', 1.0)
+        state.effects.gearshift.mult = cfg:get('EFFECTS', 'GEARSHIFT', 1.0)
+
+        state.effects.slip.motor = cfg:get('EFFECTS_MOTOR', 'SLIP', 2)
+        state.effects.kerb.motor = cfg:get('EFFECTS_MOTOR', 'KERB', 2)
+        state.effects.abs.motor = cfg:get('EFFECTS_MOTOR', 'ABS', 2)
+        state.effects.collision.motor = cfg:get('EFFECTS_MOTOR', 'COLLISION', 2)
+        state.effects.gforce.motor = cfg:get('EFFECTS_MOTOR', 'GFORCE', 2)
+        state.effects.offroad.motor = cfg:get('EFFECTS_MOTOR', 'OFFROAD', 2)
+        state.effects.engine.motor = cfg:get('EFFECTS_MOTOR', 'ENGINE', 2)
+        state.effects.gearshift.motor = cfg:get('EFFECTS_MOTOR', 'GEARSHIFT', 2)
         
         loadTrigger(cfg, 'RT', state.rt)
         loadTrigger(cfg, 'LT', state.lt)

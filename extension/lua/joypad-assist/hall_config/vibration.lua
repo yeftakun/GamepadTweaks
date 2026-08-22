@@ -26,75 +26,107 @@ local function getNativeVibration(data, multiplier)
     local eff = config.state.effects
     local car = ac.getCar(0)
 
+    local totalL, totalR = 0.0, 0.0
+
+    -- Helper functions for motor routing
+    local function addSideVib(vL, vR, setting)
+        local effL = vL * setting.mult
+        local effR = vR * setting.mult
+        if setting.motor == 0 then -- Left (Low)
+            totalL = totalL + math.max(effL, effR)
+        elseif setting.motor == 1 then -- Right (Hi)
+            totalR = totalR + math.max(effL, effR)
+        else -- Both
+            totalL = totalL + effL
+            totalR = totalR + effR
+        end
+    end
+
+    local function addGlobalVib(vib, setting)
+        local effVal = vib * setting.mult
+        if setting.motor == 0 then -- Left
+            totalL = totalL + effVal
+        elseif setting.motor == 1 then -- Right
+            totalR = totalR + effVal
+        else -- Both
+            totalL = totalL + effVal
+            totalR = totalR + effVal
+        end
+    end
+
     -- 1. SLIP (Ban Selip)
     local slipL = math.max(0, data.ndSlipL or 0)
     local slipR = math.max(0, data.ndSlipR or 0)
     local rumbleEffects = data.rumbleEffects or 1.0
     
-    local slipForceL = ((math.ceil(slipL * 10) ^ 0.3) - 1) * ((1 + slipL) ^ 0.3) * rumbleEffects * 0.01 * eff.slip
-    local slipForceR = ((math.ceil(slipR * 10) ^ 0.3) - 1) * ((1 + slipR) ^ 0.3) * rumbleEffects * 0.01 * eff.slip
+    local slipForceL = ((math.ceil(slipL * 10) ^ 0.3) - 1) * ((1 + slipL) ^ 0.3) * rumbleEffects * 0.01
+    local slipForceR = ((math.ceil(slipR * 10) ^ 0.3) - 1) * ((1 + slipR) ^ 0.3) * rumbleEffects * 0.01
     if slipForceL ~= slipForceL or slipForceL < 0 then slipForceL = 0 end
     if slipForceR ~= slipForceR or slipForceR < 0 then slipForceR = 0 end
+    addSideVib(slipForceL, slipForceR, eff.slip)
 
     -- 2. KERBS / ROAD (Permukaan Jalan)
     local speedFactor = math.max(0, math.min(1.0, (data.speedKmh or 0) / 100))
-    local surfL = speedFactor * (data.surfaceVibrationGainLeft or 0) / 20 * eff.kerb
-    local surfR = speedFactor * (data.surfaceVibrationGainRight or 0) / 20 * eff.kerb
+    local surfL = speedFactor * (data.surfaceVibrationGainLeft or 0) / 20
+    local surfR = speedFactor * (data.surfaceVibrationGainRight or 0) / 20
+    addSideVib(surfL, surfR, eff.kerb)
 
     -- 3. ABS (Rem Mengunci)
     local absVib = 0.0
     if car and car.absInAction then
-        absVib = 0.6 * eff.abs
+        absVib = 0.6
     end
+    addGlobalVib(absVib, eff.abs)
 
     -- 4. COLLISION (Tabrakan)
     local colVib = 0.0
     if car and car.collisionDepth and car.collisionDepth > 0.01 then
-        colVib = 1.0 * eff.collision
+        colVib = 1.0
     end
+    addGlobalVib(colVib, eff.collision)
 
     -- 5. G-FORCE (Guncangan/Suspensi mentok)
     local gVib = 0.0
     if data.gForces then
         local gLoad = math.abs(data.gForces.y) + math.abs(data.gForces.x)
         if gLoad > 1.5 then
-            gVib = (gLoad - 1.5) * 0.1 * eff.gforce
+            gVib = (gLoad - 1.5) * 0.1
         end
     end
+    addGlobalVib(gVib, eff.gforce)
 
     -- 6. OFF-ROAD (Keluar Trek / Rumput / Gravel)
     local offroadVib = 0.0
     if car and car.wheelsOutside and car.wheelsOutside > 1 then
-        -- Jika lebih dari 1 roda keluar trek, tambah getaran ekstra
-        offroadVib = speedFactor * 0.3 * eff.offroad
+        offroadVib = speedFactor * 0.3
     end
+    addGlobalVib(offroadVib, eff.offroad)
 
     -- 7. ENGINE RPM
     local engineVib = 0.0
     if car and car.rpmLimiter and car.rpmLimiter > 0 then
         local rpmRatio = car.rpm / car.rpmLimiter
-        if rpmRatio > 0.85 then -- Mendekati redline
-            engineVib = (rpmRatio - 0.85) * 1.5 * eff.engine
+        if rpmRatio > 0.85 then
+            engineVib = (rpmRatio - 0.85) * 1.5
         end
     end
+    addGlobalVib(engineVib, eff.engine)
 
     -- 8. GEARSHIFT (Sentakan Gigi)
     local gearVib = 0.0
     if car then
         if localState.lastGear ~= car.gear then
-            localState.gearJolt = 0.8 -- Spike getaran 80%
+            localState.gearJolt = 0.8
             localState.lastGear = car.gear
         end
         if localState.gearJolt > 0 then
-            gearVib = localState.gearJolt * eff.gearshift
-            localState.gearJolt = localState.gearJolt - 0.05 -- Pelan-pelan mereda
+            gearVib = localState.gearJolt
+            localState.gearJolt = localState.gearJolt - 0.05
         end
     end
+    addGlobalVib(gearVib, eff.gearshift)
 
-    local totalL = (slipForceL + surfL + absVib + colVib + gVib + offroadVib + engineVib + gearVib) * multiplier
-    local totalR = (slipForceR + surfR + absVib + colVib + gVib + offroadVib + engineVib + gearVib) * multiplier
-
-    return totalL, totalR
+    return totalL * multiplier, totalR * multiplier
 end
 
 local function apply(data)
