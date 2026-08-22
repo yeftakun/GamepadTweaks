@@ -38,8 +38,8 @@ local function loadTrigger(cfg, prefix, triggerState)
     
     local defaultMotor = (prefix == 'RT') and 1 or 0
     triggerState.vibration.enable = cfg:get(prefix .. '_VIBRATION', 'ENABLE', true)
-    triggerState.vibration.motor = cfg:get(prefix .. '_VIBRATION', 'MOTOR', defaultMotor) == 1 and "right" or "left"
-    triggerState.vibration.mode = cfg:get(prefix .. '_VIBRATION', 'MODE', 0) == 0 and "proportional" or "static"
+    triggerState.vibration.motor = cfg:get(prefix .. '_VIBRATION', 'MOTOR', defaultMotor)
+    triggerState.vibration.mode = cfg:get(prefix .. '_VIBRATION', 'MODE', 0)
     triggerState.vibration.maxVibrationPercent = cfg:get(prefix .. '_VIBRATION', 'MAX', 80)
 end
 
