@@ -24,7 +24,7 @@ local function getNativeVibration(data, multiplier)
     if multiplier <= 0.0 then return 0.0, 0.0 end
     
     local eff = config.state.effects
-    local car = ac.getCarState(1)
+    local car = ac.getCar(0)
 
     -- 1. SLIP (Ban Selip)
     local slipL = math.max(0, data.ndSlipL or 0)
@@ -49,7 +49,7 @@ local function getNativeVibration(data, multiplier)
 
     -- 4. COLLISION (Tabrakan)
     local colVib = 0.0
-    if car and car.collisionDepth > 0.01 then
+    if car and car.collisionDepth and car.collisionDepth > 0.01 then
         colVib = 1.0 * eff.collision
     end
 
@@ -64,15 +64,15 @@ local function getNativeVibration(data, multiplier)
 
     -- 6. OFF-ROAD (Keluar Trek / Rumput / Gravel)
     local offroadVib = 0.0
-    if car and not car.surfaceValidTrack then
-        -- Jika keluar trek, tambah getaran ekstra
+    if car and car.wheelsOutside and car.wheelsOutside > 1 then
+        -- Jika lebih dari 1 roda keluar trek, tambah getaran ekstra
         offroadVib = speedFactor * 0.3 * eff.offroad
     end
 
     -- 7. ENGINE RPM
     local engineVib = 0.0
-    if car and car.rpmMax > 0 then
-        local rpmRatio = car.rpm / car.rpmMax
+    if car and car.rpmLimiter and car.rpmLimiter > 0 then
+        local rpmRatio = car.rpm / car.rpmLimiter
         if rpmRatio > 0.85 then -- Mendekati redline
             engineVib = (rpmRatio - 0.85) * 1.5 * eff.engine
         end
