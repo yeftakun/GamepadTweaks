@@ -157,6 +157,8 @@ function windowMain(dt)
         alertTimer = alertTimer - dt
         ui.separator()
         -- Tampilkan teks berwarna hijau
-        ui.textColored(rgbm(0.2, 1.0, 0.2, 1.0), "Saved")
+        ui.textColored("Saved", rgbm(0.2, 1.0, 0.2, 1.0))
+        -- Opsional: tampilkan toast notification khas CSP
+        ui.toast(ui.Icons.Save, "HallConfig Saved")
     end
 end
