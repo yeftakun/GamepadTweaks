@@ -176,13 +176,24 @@ function windowMain(dt)
                 ui.popItemWidth()
                 ui.sameLine()
                 ui.pushItemWidth(120)
-                local motorNames = {"Left (Low)", "Right (Hi)", "Both"}
+                local motorNames = {
+                    [0] = "Left (Low)", 
+                    [1] = "Right (Hi)", 
+                    [2] = "Both"
+                }
                 local currentMotor = state.effects[e.key].motor
-                val, changed = ui.combo("##mot", currentMotor, ui.ComboFlags.None, motorNames)
-                if changed then
-                    state.effects[e.key].motor = val
-                    dirty = true
-                end
+                
+                ui.combo("##mot", motorNames[currentMotor] or "Both", ui.ComboFlags.None, function()
+                    if ui.selectable("Left (Low)", currentMotor == 0) then 
+                        state.effects[e.key].motor = 0; dirty = true 
+                    end
+                    if ui.selectable("Right (Hi)", currentMotor == 1) then 
+                        state.effects[e.key].motor = 1; dirty = true 
+                    end
+                    if ui.selectable("Both", currentMotor == 2) then 
+                        state.effects[e.key].motor = 2; dirty = true 
+                    end
+                end)
                 ui.popItemWidth()
                 ui.popID()
             end
