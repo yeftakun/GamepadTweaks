@@ -5,6 +5,14 @@ local vibration = require('vibration')
 local timer = 0
 local isLoadedLogged = false
 
+-- Shared memory untuk mengirim data telemetri ke UI
+local shared = ac.connect({
+    rawGas = ac.StructItem.float(),
+    processedGas = ac.StructItem.float(),
+    rawBrake = ac.StructItem.float(),
+    processedBrake = ac.StructItem.float()
+})
+
 local gasProcessor = signal.create()
 local brakeProcessor = signal.create()
 
@@ -25,6 +33,14 @@ function script.update(dt)
 
     -- 2. Vibration Feedback
     vibration.apply(data)
+    
+    -- 3. Telemetry for UI (Shared memory)
+    if shared then
+        shared.rawGas = rawGas
+        shared.processedGas = data.gas
+        shared.rawBrake = rawBrake
+        shared.processedBrake = data.brake
+    end
 end
 
 function script.reset()

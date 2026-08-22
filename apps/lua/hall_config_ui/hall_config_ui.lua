@@ -1,5 +1,13 @@
 local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/hall_config.ini'
 
+-- Shared memory untuk menerima data dari Gamepad FX
+local shared = ac.connect({
+    rawGas = ac.StructItem.float(),
+    processedGas = ac.StructItem.float(),
+    rawBrake = ac.StructItem.float(),
+    processedBrake = ac.StructItem.float()
+})
+
 -- State lokal untuk UI
 local state = {
     hysteresisEnable = true,
@@ -156,9 +164,36 @@ function windowMain(dt)
     if alertTimer > 0 then
         alertTimer = alertTimer - dt
         ui.separator()
-        -- Tampilkan teks berwarna hijau
         ui.textColored("Saved", rgbm(0.2, 1.0, 0.2, 1.0))
-        -- Opsional: tampilkan toast notification khas CSP
         ui.toast(ui.Icons.Save, "HallConfig Saved")
+    end
+
+    -- === Telemetry Preview ===
+    ui.separator()
+    ui.header("Preview: Telemetry")
+    
+    -- Pastikan object shared tidak nil sebelum dibaca
+    if shared then
+        -- Gas
+        ui.text("RT Raw   ")
+        ui.sameLine(80)
+        ui.progressBar(shared.rawGas or 0.0, vec2(-1, 14), string.format("%.1f%%", (shared.rawGas or 0) * 100))
+        
+        ui.text("RT Proc  ")
+        ui.sameLine(80)
+        ui.progressBar(shared.processedGas or 0.0, vec2(-1, 14), string.format("%.1f%%", (shared.processedGas or 0) * 100))
+        
+        ui.offsetCursorY(5)
+        
+        -- Brake
+        ui.text("LT Raw   ")
+        ui.sameLine(80)
+        ui.progressBar(shared.rawBrake or 0.0, vec2(-1, 14), string.format("%.1f%%", (shared.rawBrake or 0) * 100))
+        
+        ui.text("LT Proc  ")
+        ui.sameLine(80)
+        ui.progressBar(shared.processedBrake or 0.0, vec2(-1, 14), string.format("%.1f%%", (shared.processedBrake or 0) * 100))
+    else
+        ui.text("Waiting for telemetry data...")
     end
 end
