@@ -4,16 +4,12 @@
 
 ## Features
 
-* **Advanced Trigger Calibration:** Hysteresis and EMA smoothing to eliminate deadzones and signal noise.
+* **Trigger Calibration:** Hysteresis and EMA smoothing to eliminate deadzones and signal noise.
 * **Trigger Vibration:** Independent haptic feedback directly tied to your throttle (RT) and brake (LT) inputs.
 * **Discrete Native Haptics:** Separate and route native game effects (ABS, Slip, Kerbs, Gearshift, Engine RPM, etc.) to specific motors (Left/Low Freq, Right/High Freq, or Both).
-* **Live Tuning Panel:** Adjust all settings and view telemetry in real-time using the included Assetto Corsa in-game UI app.
 
 ## Setup & Installation
 
 For the complete installation guide, requirements, and the latest releases, please visit the official page on Overtake.gg:
 
 🔗 **[Download & Setup Guide on Overtake.gg](https://www.overtake.gg/)** *(Replace with your actual mod link once uploaded)*
-
----
-*Created by Yefta Asyel*
