@@ -15,12 +15,35 @@ local function getMotorValue(processedOutput, axisConfig)
     end
 end
 
+local function getNativeVibration(data)
+    -- Menghitung getaran native persis seperti skrip default CSP (race/drift.lua)
+    local slipL = math.max(0, data.ndSlipL or 0)
+    local slipR = math.max(0, data.ndSlipR or 0)
+    local rumbleEffects = data.rumbleEffects or 1.0
+    
+    local slipForceL = ((math.ceil(slipL * 10) ^ 0.3) - 1) * ((1 + slipL) ^ 0.3) * rumbleEffects * 0.01
+    local slipForceR = ((math.ceil(slipR * 10) ^ 0.3) - 1) * ((1 + slipR) ^ 0.3) * rumbleEffects * 0.01
+
+    -- Hindari hasil NaN jika perhitungan ^0.3 error
+    if slipForceL ~= slipForceL or slipForceL < 0 then slipForceL = 0 end
+    if slipForceR ~= slipForceR or slipForceR < 0 then slipForceR = 0 end
+
+    -- Tambahkan getaran jalanan (kerbs/surface)
+    local speedFactor = math.max(0, math.min(1.0, (data.speedKmh or 0) / 100))
+    local surfL = speedFactor * (data.surfaceVibrationGainLeft or 0) / 20
+    local surfR = speedFactor * (data.surfaceVibrationGainRight or 0) / 20
+
+    return slipForceL + surfL, slipForceR + surfR
+end
+
 local function apply(data)
     local cfg = config.state
     
-    -- AMBIL getaran asli dari game (Kerbs, ABS, Tabrakan) agar tidak hilang
-    local leftMotor = data.vibrationLeft or 0.0
-    local rightMotor = data.vibrationRight or 0.0
+    -- JANGAN BACA data.vibrationLeft karena akan menyebabkan infinite feedback loop (bug bergetar lama).
+    -- Hitung sendiri getaran asli gamenya (Slip + Kerb) di tiap frame:
+    local nativeLeft, nativeRight = getNativeVibration(data)
+    local leftMotor = nativeLeft
+    local rightMotor = nativeRight
 
     -- 1. Evaluasi kebutuhan motor untuk RT (Gas)
     local rtValue = getMotorValue(data.gas, cfg.rt.vibration)
@@ -39,8 +62,8 @@ local function apply(data)
     end
 
     -- Terapkan hasil ke data object dengan batas maksimal 1.0
-    data.vibrationLeft = math.min(1.0, leftMotor)
-    data.vibrationRight = math.min(1.0, rightMotor)
+    data.vibrationLeft = math.max(0.0, math.min(1.0, leftMotor))
+    data.vibrationRight = math.max(0.0, math.min(1.0, rightMotor))
 end
 
 local function reset(data)
