@@ -2,7 +2,7 @@ local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/hall_config.ini'
 
 local state = {
     global = {
-        nativeVibrationEnable = true
+        nativeVibrationMultiplier = 1.0
     },
     rt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
@@ -38,7 +38,7 @@ local function reload(dt)
     if timer >= 0.5 then
         timer = 0
         local cfg = ac.INIConfig.load(cfgPath)
-        state.global.nativeVibrationEnable = cfg:get('GLOBAL', 'NATIVE_VIBRATION', true)
+        state.global.nativeVibrationMultiplier = cfg:get('GLOBAL', 'NATIVE_MULTIPLIER', 1.0)
         loadTrigger(cfg, 'RT', state.rt)
         loadTrigger(cfg, 'LT', state.lt)
     end

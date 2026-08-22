@@ -9,7 +9,7 @@ local shared = ac.connect({
 }, true)
 
 local state = {
-    global = { nativeVibrationEnable = true },
+    global = { nativeVibrationMultiplier = 1.0 },
     rt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
@@ -53,14 +53,14 @@ end
 
 local function loadConfig()
     local cfg = ac.INIConfig.load(cfgPath)
-    state.global.nativeVibrationEnable = cfg:get('GLOBAL', 'NATIVE_VIBRATION', true)
+    state.global.nativeVibrationMultiplier = cfg:get('GLOBAL', 'NATIVE_MULTIPLIER', 1.0)
     loadTriggerConfig(cfg, 'RT', state.rt)
     loadTriggerConfig(cfg, 'LT', state.lt)
 end
 
 local function saveConfig()
     local cfg = ac.INIConfig.load(cfgPath)
-    cfg:set('GLOBAL', 'NATIVE_VIBRATION', state.global.nativeVibrationEnable)
+    cfg:set('GLOBAL', 'NATIVE_MULTIPLIER', state.global.nativeVibrationMultiplier)
     saveTriggerConfig(cfg, 'RT', state.rt)
     saveTriggerConfig(cfg, 'LT', state.lt)
     cfg:save(cfgPath)
@@ -83,9 +83,17 @@ function windowMain(dt)
     ui.pushFont(ui.Font.Title)
     ui.text("Global Settings")
     ui.popFont()
-    if ui.checkbox("Enable Native In-Game Vibration (Slip, Curbs)", state.global.nativeVibrationEnable) then
-        state.global.nativeVibrationEnable = not state.global.nativeVibrationEnable
+    
+    val, changed = ui.slider("##native_mult", state.global.nativeVibrationMultiplier, 0.0, 5.0, "Native Vibration: %.1fx")
+    if changed then
+        state.global.nativeVibrationMultiplier = val
         dirty = true
+    end
+    
+    if state.global.nativeVibrationMultiplier == 0.0 then
+        ui.textColored("Native Vibration Disabled", rgbm(0.5, 0.5, 0.5, 1))
+    else
+        ui.textColored("Scales curbs, slip, and ABS vibrations", rgbm(0.5, 0.5, 0.5, 1))
     end
     ui.separator()
 

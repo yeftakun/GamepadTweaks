@@ -15,7 +15,9 @@ local function getMotorValue(processedOutput, axisConfig)
     end
 end
 
-local function getNativeVibration(data)
+local function getNativeVibration(data, multiplier)
+    if multiplier <= 0.0 then return 0.0, 0.0 end
+
     -- Menghitung getaran native persis seperti skrip default CSP (race/drift.lua)
     local slipL = math.max(0, data.ndSlipL or 0)
     local slipR = math.max(0, data.ndSlipR or 0)
@@ -33,17 +35,23 @@ local function getNativeVibration(data)
     local surfL = speedFactor * (data.surfaceVibrationGainLeft or 0) / 20
     local surfR = speedFactor * (data.surfaceVibrationGainRight or 0) / 20
 
-    return slipForceL + surfL, slipForceR + surfR
+    -- INJEKSI GETARAN ABS DARI PHYSICS STATE
+    local absVib = 0.0
+    local car = ac.getCarState(1)
+    if car and car.absInAction then
+        absVib = 0.6 -- Beri getaran dasar 60% jika ABS menyala
+    end
+
+    local totalL = (slipForceL + surfL + absVib) * multiplier
+    local totalR = (slipForceR + surfR + absVib) * multiplier
+
+    return totalL, totalR
 end
 
 local function apply(data)
     local cfg = config.state
     
-    local nativeLeft, nativeRight = 0.0, 0.0
-    
-    if cfg.global.nativeVibrationEnable then
-        nativeLeft, nativeRight = getNativeVibration(data)
-    end
+    local nativeLeft, nativeRight = getNativeVibration(data, cfg.global.nativeVibrationMultiplier)
     
     local hallLeft = 0.0
     local hallRight = 0.0
