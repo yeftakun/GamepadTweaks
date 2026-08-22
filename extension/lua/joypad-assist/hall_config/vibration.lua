@@ -39,31 +39,34 @@ end
 local function apply(data)
     local cfg = config.state
     
-    -- JANGAN BACA data.vibrationLeft karena akan menyebabkan infinite feedback loop (bug bergetar lama).
-    -- Hitung sendiri getaran asli gamenya (Slip + Kerb) di tiap frame:
-    local nativeLeft, nativeRight = getNativeVibration(data)
-    local leftMotor = nativeLeft
-    local rightMotor = nativeRight
+    local nativeLeft, nativeRight = 0.0, 0.0
+    
+    if cfg.global.nativeVibrationEnable then
+        nativeLeft, nativeRight = getNativeVibration(data)
+    end
+    
+    local hallLeft = 0.0
+    local hallRight = 0.0
 
     -- 1. Evaluasi kebutuhan motor untuk RT (Gas)
     local rtValue = getMotorValue(data.gas, cfg.rt.vibration)
     if cfg.rt.vibration.motor == 0 then
-        leftMotor = math.max(leftMotor, rtValue)
+        hallLeft = math.max(hallLeft, rtValue)
     else
-        rightMotor = math.max(rightMotor, rtValue)
+        hallRight = math.max(hallRight, rtValue)
     end
 
     -- 2. Evaluasi kebutuhan motor untuk LT (Brake)
     local ltValue = getMotorValue(data.brake, cfg.lt.vibration)
     if cfg.lt.vibration.motor == 0 then
-        leftMotor = math.max(leftMotor, ltValue)
+        hallLeft = math.max(hallLeft, ltValue)
     else
-        rightMotor = math.max(rightMotor, ltValue)
+        hallRight = math.max(hallRight, ltValue)
     end
 
-    -- Terapkan hasil ke data object dengan batas maksimal 1.0
-    data.vibrationLeft = math.max(0.0, math.min(1.0, leftMotor))
-    data.vibrationRight = math.max(0.0, math.min(1.0, rightMotor))
+    -- Terapkan secara aditif (+), dibatasi maksimal 100% (1.0)
+    data.vibrationLeft = math.max(0.0, math.min(1.0, nativeLeft + hallLeft))
+    data.vibrationRight = math.max(0.0, math.min(1.0, nativeRight + hallRight))
 end
 
 local function reset(data)

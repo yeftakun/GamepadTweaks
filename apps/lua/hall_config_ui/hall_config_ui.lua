@@ -9,6 +9,7 @@ local shared = ac.connect({
 }, true)
 
 local state = {
+    global = { nativeVibrationEnable = true },
     rt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
@@ -52,12 +53,14 @@ end
 
 local function loadConfig()
     local cfg = ac.INIConfig.load(cfgPath)
+    state.global.nativeVibrationEnable = cfg:get('GLOBAL', 'NATIVE_VIBRATION', true)
     loadTriggerConfig(cfg, 'RT', state.rt)
     loadTriggerConfig(cfg, 'LT', state.lt)
 end
 
 local function saveConfig()
     local cfg = ac.INIConfig.load(cfgPath)
+    cfg:set('GLOBAL', 'NATIVE_VIBRATION', state.global.nativeVibrationEnable)
     saveTriggerConfig(cfg, 'RT', state.rt)
     saveTriggerConfig(cfg, 'LT', state.lt)
     cfg:save(cfgPath)
@@ -75,6 +78,16 @@ local currentTriggerTab = "rt" -- "rt" atau "lt"
 function windowMain(dt)
     local dirty = false
     local val, changed
+    
+    -- === Global Settings ===
+    ui.pushFont(ui.Font.Title)
+    ui.text("Global Settings")
+    ui.popFont()
+    if ui.checkbox("Enable Native In-Game Vibration (Slip, Curbs)", state.global.nativeVibrationEnable) then
+        state.global.nativeVibrationEnable = not state.global.nativeVibrationEnable
+        dirty = true
+    end
+    ui.separator()
 
     -- Pilihan Trigger Tab
     ui.pushFont(ui.Font.Title)
