@@ -143,7 +143,7 @@ function windowMain(dt)
                 ui.pushID(e.key)
                 ui.text(e.label)
                 ui.sameLine(140)
-                val, changed = ui.slider("##sld", state.effects[e.key], 0.0, 5.0, "%.1fx")
+                val, changed = ui.slider("##sld", state.effects[e.key], 0.0, 1.0, "%.1fx")
                 if changed then
                     state.effects[e.key] = val
                     dirty = true
