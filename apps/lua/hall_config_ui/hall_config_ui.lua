@@ -1,124 +1,141 @@
 local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/hall_config.ini'
 
--- Load awal konfigurasi
-local cfg = ac.INIConfig.load(cfgPath)
-
+-- State lokal untuk UI
 local state = {
-    hysteresisEnable = cfg:get('HYSTERESIS', 'ENABLE', true),
-    hysteresisThresholdUp = cfg:get('HYSTERESIS', 'UP', 0.27),
-    hysteresisThresholdDown = cfg:get('HYSTERESIS', 'DOWN', 0.23),
-    
-    smoothingEnable = cfg:get('SMOOTHING', 'ENABLE', true),
-    smoothingTimeConstant = cfg:get('SMOOTHING', 'TIME_CONSTANT', 0.015),
-    
-    vibRTEnable = cfg:get('VIBRATION_RT', 'ENABLE', true),
-    vibRTMotor = cfg:get('VIBRATION_RT', 'MOTOR', 1), -- 1=right, 0=left
-    vibRTMode = cfg:get('VIBRATION_RT', 'MODE', 0),   -- 0=proportional, 1=static
-    vibRTMax = cfg:get('VIBRATION_RT', 'MAX', 80),
-    
-    vibLTEnable = cfg:get('VIBRATION_LT', 'ENABLE', true),
-    vibLTMotor = cfg:get('VIBRATION_LT', 'MOTOR', 0),
-    vibLTMode = cfg:get('VIBRATION_LT', 'MODE', 0),
-    vibLTMax = cfg:get('VIBRATION_LT', 'MAX', 80)
+    hysteresisEnable = true,
+    hysteresisThresholdUp = 0.27,
+    hysteresisThresholdDown = 0.23,
+
+    smoothingEnable = true,
+    smoothingTimeConstant = 0.015,
+
+    vibRTEnable = true,
+    vibRTMotor = 1,   -- 1=right, 0=left
+    vibRTMode = 0,    -- 0=proportional, 1=static
+    vibRTMax = 80,
+
+    vibLTEnable = true,
+    vibLTMotor = 0,
+    vibLTMode = 0,
+    vibLTMax = 80
 }
 
-local function saveState()
+-- Load config dari file INI (jika ada)
+local function loadConfig()
+    local cfg = ac.INIConfig.load(cfgPath)
+    state.hysteresisEnable = cfg:get('HYSTERESIS', 'ENABLE', true)
+    state.hysteresisThresholdUp = cfg:get('HYSTERESIS', 'UP', 0.27)
+    state.hysteresisThresholdDown = cfg:get('HYSTERESIS', 'DOWN', 0.23)
+    state.smoothingEnable = cfg:get('SMOOTHING', 'ENABLE', true)
+    state.smoothingTimeConstant = cfg:get('SMOOTHING', 'TIME_CONSTANT', 0.015)
+    state.vibRTEnable = cfg:get('VIBRATION_RT', 'ENABLE', true)
+    state.vibRTMotor = cfg:get('VIBRATION_RT', 'MOTOR', 1)
+    state.vibRTMode = cfg:get('VIBRATION_RT', 'MODE', 0)
+    state.vibRTMax = cfg:get('VIBRATION_RT', 'MAX', 80)
+    state.vibLTEnable = cfg:get('VIBRATION_LT', 'ENABLE', true)
+    state.vibLTMotor = cfg:get('VIBRATION_LT', 'MOTOR', 0)
+    state.vibLTMode = cfg:get('VIBRATION_LT', 'MODE', 0)
+    state.vibLTMax = cfg:get('VIBRATION_LT', 'MAX', 80)
+end
+
+-- Save config ke file INI
+local function saveConfig()
+    local cfg = ac.INIConfig.load(cfgPath)
     cfg:set('HYSTERESIS', 'ENABLE', state.hysteresisEnable)
     cfg:set('HYSTERESIS', 'UP', state.hysteresisThresholdUp)
     cfg:set('HYSTERESIS', 'DOWN', state.hysteresisThresholdDown)
-    
     cfg:set('SMOOTHING', 'ENABLE', state.smoothingEnable)
     cfg:set('SMOOTHING', 'TIME_CONSTANT', state.smoothingTimeConstant)
-    
     cfg:set('VIBRATION_RT', 'ENABLE', state.vibRTEnable)
     cfg:set('VIBRATION_RT', 'MOTOR', state.vibRTMotor)
     cfg:set('VIBRATION_RT', 'MODE', state.vibRTMode)
     cfg:set('VIBRATION_RT', 'MAX', state.vibRTMax)
-    
     cfg:set('VIBRATION_LT', 'ENABLE', state.vibLTEnable)
     cfg:set('VIBRATION_LT', 'MOTOR', state.vibLTMotor)
     cfg:set('VIBRATION_LT', 'MODE', state.vibLTMode)
     cfg:set('VIBRATION_LT', 'MAX', state.vibLTMax)
-    
     cfg:save(cfgPath)
 end
 
--- Helper render dropdown/combo
-local function renderMotorCombo(label, currentVal)
-    local changed = false
-    local newVal = currentVal
-    local currentText = (currentVal == 0) and "Left (Low Freq)" or "Right (High Freq)"
-    
-    ui.combo(label, currentText, ui.ComboFlags.None, function()
-        if ui.selectable("Left (Low Freq)", currentVal == 0) then newVal = 0; changed = true end
-        if ui.selectable("Right (High Freq)", currentVal == 1) then newVal = 1; changed = true end
-    end)
-    return changed, newVal
-end
+-- Load config saat script start
+loadConfig()
 
-local function renderModeCombo(label, currentVal)
-    local changed = false
-    local newVal = currentVal
-    local currentText = (currentVal == 0) and "Proportional" or "Static"
-    
-    ui.combo(label, currentText, ui.ComboFlags.None, function()
-        if ui.selectable("Proportional", currentVal == 0) then newVal = 0; changed = true end
-        if ui.selectable("Static", currentVal == 1) then newVal = 1; changed = true end
-    end)
-    return changed, newVal
-end
+-- Helper: dropdown motor
+local motorLabels = { [0] = "Left (Low Freq)", [1] = "Right (High Freq)" }
+local modeLabels = { [0] = "Proportional", [1] = "Static" }
 
-function windowMain()
+function windowMain(dt)
     local dirty = false
-    local b, changed, val
+    local val, changed
 
+    -- === Hysteresis ===
     ui.header("Hysteresis Deadzone")
-    b = ui.checkbox("Enable Hysteresis", state.hysteresisEnable)
-    if b ~= state.hysteresisEnable then state.hysteresisEnable = b; dirty = true end
-    
-    changed, val = ui.slider("Threshold Up", state.hysteresisThresholdUp, 0.0, 1.0, "%.2f")
+    if ui.checkbox("Enable Hysteresis", state.hysteresisEnable) then
+        state.hysteresisEnable = not state.hysteresisEnable
+        dirty = true
+    end
+
+    val, changed = ui.slider("##hyst_up", state.hysteresisThresholdUp, 0.0, 1.0, "Threshold Up: %.2f")
     if changed then state.hysteresisThresholdUp = val; dirty = true end
 
-    changed, val = ui.slider("Threshold Down", state.hysteresisThresholdDown, 0.0, 1.0, "%.2f")
+    val, changed = ui.slider("##hyst_down", state.hysteresisThresholdDown, 0.0, 1.0, "Threshold Down: %.2f")
     if changed then state.hysteresisThresholdDown = val; dirty = true end
 
+    -- === Smoothing ===
     ui.separator()
     ui.header("Smoothing (EMA)")
-    b = ui.checkbox("Enable Smoothing", state.smoothingEnable)
-    if b ~= state.smoothingEnable then state.smoothingEnable = b; dirty = true end
+    if ui.checkbox("Enable Smoothing", state.smoothingEnable) then
+        state.smoothingEnable = not state.smoothingEnable
+        dirty = true
+    end
 
-    changed, val = ui.slider("Time Constant (s)", state.smoothingTimeConstant, 0.0, 0.1, "%.3f")
+    val, changed = ui.slider("##smooth_tc", state.smoothingTimeConstant, 0.001, 0.1, "Time Constant: %.3f s")
     if changed then state.smoothingTimeConstant = val; dirty = true end
 
+    -- === Vibration RT ===
     ui.separator()
     ui.header("Vibration - Right Trigger (Gas)")
-    b = ui.checkbox("Enable RT Vib", state.vibRTEnable)
-    if b ~= state.vibRTEnable then state.vibRTEnable = b; dirty = true end
+    if ui.checkbox("Enable RT Vibration", state.vibRTEnable) then
+        state.vibRTEnable = not state.vibRTEnable
+        dirty = true
+    end
 
-    changed, val = renderMotorCombo("Motor##RT", state.vibRTMotor)
-    if changed then state.vibRTMotor = val; dirty = true end
+    ui.combo("Motor##RT", motorLabels[state.vibRTMotor], ui.ComboFlags.None, function()
+        if ui.selectable("Left (Low Freq)", state.vibRTMotor == 0) then state.vibRTMotor = 0; dirty = true end
+        if ui.selectable("Right (High Freq)", state.vibRTMotor == 1) then state.vibRTMotor = 1; dirty = true end
+    end)
 
-    changed, val = renderModeCombo("Mode##RT", state.vibRTMode)
-    if changed then state.vibRTMode = val; dirty = true end
+    ui.combo("Mode##RT", modeLabels[state.vibRTMode], ui.ComboFlags.None, function()
+        if ui.selectable("Proportional", state.vibRTMode == 0) then state.vibRTMode = 0; dirty = true end
+        if ui.selectable("Static", state.vibRTMode == 1) then state.vibRTMode = 1; dirty = true end
+    end)
 
-    changed, val = ui.slider("Max Vibration##RT", state.vibRTMax, 0, 100, "%.0f%%")
+    val, changed = ui.slider("##rt_max", state.vibRTMax, 0, 100, "Max Vibration: %.0f%%")
     if changed then state.vibRTMax = val; dirty = true end
 
+    -- === Vibration LT ===
     ui.separator()
     ui.header("Vibration - Left Trigger (Brake)")
-    b = ui.checkbox("Enable LT Vib", state.vibLTEnable)
-    if b ~= state.vibLTEnable then state.vibLTEnable = b; dirty = true end
+    if ui.checkbox("Enable LT Vibration", state.vibLTEnable) then
+        state.vibLTEnable = not state.vibLTEnable
+        dirty = true
+    end
 
-    changed, val = renderMotorCombo("Motor##LT", state.vibLTMotor)
-    if changed then state.vibLTMotor = val; dirty = true end
+    ui.combo("Motor##LT", motorLabels[state.vibLTMotor], ui.ComboFlags.None, function()
+        if ui.selectable("Left (Low Freq)", state.vibLTMotor == 0) then state.vibLTMotor = 0; dirty = true end
+        if ui.selectable("Right (High Freq)", state.vibLTMotor == 1) then state.vibLTMotor = 1; dirty = true end
+    end)
 
-    changed, val = renderModeCombo("Mode##LT", state.vibLTMode)
-    if changed then state.vibLTMode = val; dirty = true end
+    ui.combo("Mode##LT", modeLabels[state.vibLTMode], ui.ComboFlags.None, function()
+        if ui.selectable("Proportional", state.vibLTMode == 0) then state.vibLTMode = 0; dirty = true end
+        if ui.selectable("Static", state.vibLTMode == 1) then state.vibLTMode = 1; dirty = true end
+    end)
 
-    changed, val = ui.slider("Max Vibration##LT", state.vibLTMax, 0, 100, "%.0f%%")
+    val, changed = ui.slider("##lt_max", state.vibLTMax, 0, 100, "Max Vibration: %.0f%%")
     if changed then state.vibLTMax = val; dirty = true end
 
+    -- Save hanya ketika ada perubahan
     if dirty then
-        saveState()
+        saveConfig()
     end
 end
