@@ -12,4 +12,4 @@
 
 For the complete installation guide, requirements, and the latest releases, please visit the official page on Overtake.gg:
 
-🔗 **[Download & Setup Guide on Overtake.gg](https://www.overtake.gg/)**
+🔗 **[Download & Setup Guide on Overtake.gg](https://www.overtake.gg/downloads/gamepad-tweaks-hall-trigger-deadzone-fix-haptic-feedback.86222/)**
