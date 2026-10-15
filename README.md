@@ -12,4 +12,4 @@
 
 For the complete installation guide, requirements, and the latest releases, please visit the official page on Overtake.gg:
 
-🔗 **[Download & Setup Guide on Overtake.gg](https://www.overtake.gg/)** *(Replace with your actual mod link once uploaded)*
+🔗 **[Download & Setup Guide on Overtake.gg](https://www.overtake.gg/)**
