@@ -1,11 +1,60 @@
 local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/gamepad_tweaks.ini'
 
+-- === Response Curve helpers (harus sama dengan config.lua / signal.lua di sisi script) ===
+local MIN_SLOPE = 0.2
+
+local function clampKnee(x, y)
+    x = math.max(0.05, math.min(0.95, x))
+    local yMin = math.max(0.05, MIN_SLOPE * x)
+    local yMax = math.min(0.95, 1.0 - MIN_SLOPE * (1.0 - x))
+    y = math.max(yMin, math.min(yMax, y))
+    return x, y
+end
+
+local function bezier(x, cx, cy)
+    if x <= 0.0 then return 0.0 end
+    if x >= 1.0 then return 1.0 end
+    local t = x / (cx + math.sqrt(cx * cx + (1.0 - 2.0 * cx) * x))
+    return 2.0 * (1.0 - t) * t * cy + t * t
+end
+
+local CURVE_PRESETS = {
+    { name = "Linear",     x = 0.50, y = 0.50, tip = "Straight response. No change to the hysteresis output." },
+    { name = "Soft start", x = 0.60, y = 0.30, tip = "Light pressure is dulled, deep pressure is more responsive.\nA good starting point for throttle." },
+    { name = "Quick bite", x = 0.45, y = 0.60, tip = "Light pressure reacts sooner, deep pressure is finer.\nA good starting point for brake." },
+}
+
+local CURVE_HELP = table.concat({
+    "Response Curve",
+    "",
+    "Changes how strongly the trigger reacts to finger pressure.",
+    "The dashed diagonal is a straight response. The blue line is",
+    "yours, and the hollow circle is the knee that pulls the curve",
+    "toward it. The red dot is where the trigger is right now.",
+    "",
+    "Knee below the diagonal: light pressure is dulled and deep",
+    "pressure is more responsive. Good for throttle if your finger",
+    "feels too twitchy.",
+    "",
+    "Knee above the diagonal: light pressure reacts right away and",
+    "deep pressure is finer. Good for brake bite.",
+    "",
+    "How to tune:",
+    "1. Set Hysteresis first, then the Curve.",
+    "2. Start from a preset and nudge Knee Y a little at a time.",
+    "3. Compare Raw and Processed in Live Telemetry, and toggle",
+    "   Enable Curve to A/B test.",
+    "4. Test on track before settling.",
+}, "\n")
+
 local shared = ac.connect({
-    key = ac.StructItem.key('GamepadTweaks_Telemetry_v1'),
+    key = ac.StructItem.key('GamepadTweaks_Telemetry_v2'),
     rawGas = ac.StructItem.float(),
     processedGas = ac.StructItem.float(),
     rawBrake = ac.StructItem.float(),
-    processedBrake = ac.StructItem.float()
+    processedBrake = ac.StructItem.float(),
+    s1Gas = ac.StructItem.float(),
+    s1Brake = ac.StructItem.float()
 }, true)
 
 local state = {
@@ -23,11 +72,13 @@ local state = {
     rt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
+        curve = { enable = true, x = 0.5, y = 0.5 },
         vibration = { enable = true, motor = 1, mode = 0, maxVibrationPercent = 80 }
     },
     lt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
+        curve = { enable = true, x = 0.5, y = 0.5 },
         vibration = { enable = true, motor = 0, mode = 0, maxVibrationPercent = 80 }
     }
 }
@@ -40,6 +91,11 @@ local function loadTriggerConfig(cfg, prefix, ts)
     ts.smoothingEnable = cfg:get(prefix .. '_SMOOTHING', 'ENABLE', true)
     ts.smoothingTimeConstant = cfg:get(prefix .. '_SMOOTHING', 'TIME_CONSTANT', 0.015)
     
+    ts.curve.enable = cfg:get(prefix .. '_CURVE', 'ENABLE', true)
+    ts.curve.x, ts.curve.y = clampKnee(
+        cfg:get(prefix .. '_CURVE', 'X', 0.5),
+        cfg:get(prefix .. '_CURVE', 'Y', 0.5))
+
     local defaultMotor = (prefix == 'RT') and 1 or 0
     ts.vibration.enable = cfg:get(prefix .. '_VIBRATION', 'ENABLE', true)
     ts.vibration.motor = cfg:get(prefix .. '_VIBRATION', 'MOTOR', defaultMotor)
@@ -54,6 +110,10 @@ local function saveTriggerConfig(cfg, prefix, ts)
     
     cfg:set(prefix .. '_SMOOTHING', 'ENABLE', ts.smoothingEnable)
     cfg:set(prefix .. '_SMOOTHING', 'TIME_CONSTANT', ts.smoothingTimeConstant)
+
+    cfg:set(prefix .. '_CURVE', 'ENABLE', ts.curve.enable)
+    cfg:set(prefix .. '_CURVE', 'X', ts.curve.x)
+    cfg:set(prefix .. '_CURVE', 'Y', ts.curve.y)
     
     cfg:set(prefix .. '_VIBRATION', 'ENABLE', ts.vibration.enable)
     cfg:set(prefix .. '_VIBRATION', 'MOTOR', ts.vibration.motor)
@@ -242,6 +302,72 @@ function windowMain(dt)
         end
         dirty = true 
     end
+
+    -- === Response Curve (S1 -> S2) ===
+    ui.separator()
+    ui.header("Response Curve")
+    if ui.checkbox("Enable Curve", ts.curve.enable) then
+        ts.curve.enable = not ts.curve.enable
+        dirty = true
+    end
+    ui.sameLine(0, 10)
+    ui.textColored("(?)", rgbm(0.5, 0.8, 1.0, 1.0))
+    if ui.itemHovered() then ui.setTooltip(CURVE_HELP) end
+
+    for i, preset in ipairs(CURVE_PRESETS) do
+        if i > 1 then ui.sameLine(0, 6) end
+        if ui.button(preset.name) then
+            ts.curve.x, ts.curve.y = clampKnee(preset.x, preset.y)
+            dirty = true
+        end
+        if ui.itemHovered() then ui.setTooltip(preset.tip) end
+    end
+
+    val, changed = ui.slider("##curve_x", ts.curve.x, 0.05, 0.95, "Knee X (position): %.2f")
+    if changed then
+        ts.curve.x, ts.curve.y = clampKnee(val, ts.curve.y)
+        dirty = true
+    end
+    if ui.itemHovered() then
+        ui.setTooltip("Where the bend happens along the pressure axis.\nHigher = the flat part lasts longer.")
+    end
+
+    val, changed = ui.slider("##curve_y", ts.curve.y, 0.05, 0.95, "Knee Y (depth): %.2f")
+    if changed then
+        ts.curve.x, ts.curve.y = clampKnee(ts.curve.x, val)
+        dirty = true
+    end
+    if ui.itemHovered() then
+        ui.setTooltip("How far the knee sits from the straight line.\nBelow it: light pressure is dulled. Above it: sharper.\nLimited so the curve never becomes a dead zone.")
+    end
+
+    -- Preview: kurva, titik kontrol (lingkaran kosong), dan posisi trigger sekarang (titik merah)
+    local c = ts.curve
+    local alpha = c.enable and 1.0 or 0.35
+    local plotSize = 160
+    local origin = ui.getCursor()
+    local function P(px, py)
+        return vec2(origin.x + 4 + px * plotSize, origin.y + 4 + (1 - py) * plotSize)
+    end
+    ui.dummy(vec2(plotSize + 8, plotSize + 8))
+    ui.drawRectFilled(P(0, 1), P(1, 0), rgbm(0.05, 0.07, 0.09, 0.85))
+    ui.drawRect(P(0, 1), P(1, 0), rgbm(1, 1, 1, 0.25))
+    ui.drawLine(P(0, 0), P(1, 1), rgbm(1, 1, 1, 0.35), 1)
+    ui.drawLine(P(0, 0), P(c.x, c.y), rgbm(0.3, 0.8, 1.0, 0.25 * alpha), 1)
+    ui.drawLine(P(c.x, c.y), P(1, 1), rgbm(0.3, 0.8, 1.0, 0.25 * alpha), 1)
+    for i = 0, 40 do
+        local t = i / 40
+        ui.pathLineTo(P(t, bezier(t, c.x, c.y)))
+    end
+    ui.pathStroke(rgbm(0.3, 0.8, 1.0, alpha), false, 2.5)
+
+    local liveX = 0.0
+    if shared then
+        liveX = (currentTriggerTab == "rt") and (shared.s1Gas or 0.0) or (shared.s1Brake or 0.0)
+    end
+    local liveY = c.enable and bezier(liveX, c.x, c.y) or liveX
+    ui.drawCircle(P(c.x, c.y), 5, rgbm(0.3, 0.8, 1.0, alpha), 16, 1.5)
+    ui.drawCircleFilled(P(liveX, liveY), 4, rgbm(1.0, 0.35, 0.25, 1.0), 12)
 
     -- === Smoothing ===
     ui.separator()

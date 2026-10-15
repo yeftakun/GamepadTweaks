@@ -1,5 +1,17 @@
 local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/gamepad_tweaks.ini'
 
+-- Batas aman titik kontrol curve: kemiringan awal dan akhir kurva minimal MIN_SLOPE,
+-- supaya area "ditahan" tidak berubah jadi deadzone kedua.
+local MIN_SLOPE = 0.2
+
+local function clampKnee(x, y)
+    x = math.max(0.05, math.min(0.95, x))
+    local yMin = math.max(0.05, MIN_SLOPE * x)
+    local yMax = math.min(0.95, 1.0 - MIN_SLOPE * (1.0 - x))
+    y = math.max(yMin, math.min(yMax, y))
+    return x, y
+end
+
 local state = {
     global = {
         nativeVibrationMultiplier = 1.0
@@ -17,11 +29,13 @@ local state = {
     rt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
+        curve = { enable = true, x = 0.5, y = 0.5 },
         vibration = { enable = true, motor = 1, mode = 0, maxVibrationPercent = 80 }
     },
     lt = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
+        curve = { enable = true, x = 0.5, y = 0.5 },
         vibration = { enable = true, motor = 0, mode = 0, maxVibrationPercent = 80 }
     }
 }
@@ -36,6 +50,11 @@ local function loadTrigger(cfg, prefix, triggerState)
     triggerState.smoothingEnable = cfg:get(prefix .. '_SMOOTHING', 'ENABLE', true)
     triggerState.smoothingTimeConstant = cfg:get(prefix .. '_SMOOTHING', 'TIME_CONSTANT', 0.015)
     
+    triggerState.curve.enable = cfg:get(prefix .. '_CURVE', 'ENABLE', true)
+    triggerState.curve.x, triggerState.curve.y = clampKnee(
+        cfg:get(prefix .. '_CURVE', 'X', 0.5),
+        cfg:get(prefix .. '_CURVE', 'Y', 0.5))
+
     local defaultMotor = (prefix == 'RT') and 1 or 0
     triggerState.vibration.enable = cfg:get(prefix .. '_VIBRATION', 'ENABLE', true)
     triggerState.vibration.motor = cfg:get(prefix .. '_VIBRATION', 'MOTOR', defaultMotor)
@@ -75,5 +94,6 @@ end
 
 return {
     state = state,
-    reload = reload
+    reload = reload,
+    clampKnee = clampKnee
 }
