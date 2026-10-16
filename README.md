@@ -4,9 +4,10 @@
 
 ## Features
 
-* **Trigger Calibration:** Hysteresis and EMA smoothing to eliminate deadzones and signal noise.
-* **Trigger Vibration:** Independent haptic feedback directly tied to your throttle (RT) and brake (LT) inputs.
-* **Discrete Native Haptics:** Separate and route native game effects (ABS, Slip, Kerbs, Gearshift, Engine RPM, etc.) to specific motors (Left/Low Freq, Right/High Freq, or Both).
+- **Trigger Calibration:** Hysteresis and EMA smoothing to eliminate deadzones and signal noise.
+- **Response Curve:** Reshape how trigger pressure maps to output with an adjustable curve. Dull light presses so your throttle finger feels less twitchy, or sharpen them for a quicker brake bite.
+- **Trigger Vibration:** Independent haptic feedback directly tied to your throttle (RT) and brake (LT) inputs.
+- **Discrete Native Haptics:** Separate and route native game effects (ABS, Slip, Kerbs, Gearshift, Engine RPM, etc.) to specific motors (Left/Low Freq, Right/High Freq, or Both).
 
 ## Setup & Installation
 
