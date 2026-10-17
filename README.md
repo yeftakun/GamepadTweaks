@@ -2,6 +2,8 @@
 
 **Gamepad Tweaks** is a Custom Shaders Patch (CSP) Gamepad FX script and in-game UI app. It provides precise calibration for Hall Effect triggers and gives you full control over how game vibrations are separated and routed to your controller's haptic motors.
 
+![preview](assets/preview.png)
+
 ## Features
 
 - **Trigger Calibration:** Hysteresis and EMA smoothing to eliminate deadzones and signal noise.
