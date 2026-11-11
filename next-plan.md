@@ -63,6 +63,8 @@ Aturan selector:
 - Pengguna tetap memilih trigger yang ingin dikonfigurasi melalui opsi `RT (Gas)` atau `LT (Brake)`.
 - Trigger Input, Input Indicator (Vibrate), Trigger Smooth, Trigger Sensitivity, dan Preview mengikuti trigger yang sedang dipilih.
 - Selector berlaku untuk satu trigger aktif pada satu waktu, bukan untuk menampilkan konfigurasi RT dan LT sekaligus.
+- Tampilkan label `Right Trigger (Gas)` atau `Left Trigger (Brake)` pada setiap bagian yang mengikuti selector.
+- Tampilkan keterangan singkat bahwa semua pengaturan di bawah selector berlaku untuk trigger yang dipilih.
 - Jangan memindahkan selector trigger ke bawah bagian pemrosesan.
 - Jangan membuat halaman konfigurasi terpisah untuk RT dan LT jika tidak diperlukan.
 - Fitur yang hanya relevan untuk rem harus ditampilkan secara kontekstual pada opsi `LT (Brake)`.

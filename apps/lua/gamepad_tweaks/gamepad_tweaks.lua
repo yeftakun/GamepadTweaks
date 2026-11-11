@@ -43,7 +43,7 @@ local CURVE_HELP = table.concat({
     "1. Set Hysteresis first, then the Curve.",
     "2. Start from a preset and nudge Knee Y a little at a time.",
     "3. Compare Raw and Processed in Live Telemetry, and toggle",
-    "   Enable Curve to A/B test.",
+    "   Enable Input Curve to A/B test.",
     "4. Test on track before settling.",
 }, "\n")
 
@@ -204,10 +204,9 @@ local function renderVibrationLevelCombo(id, label, value, onChanged)
     return changed
 end
 
-local function renderTriggerVibrationSettings(id, title, vibration)
+local function renderTriggerVibrationSettings(id, vibration)
     local changed = false
     ui.pushID(id)
-    ui.textColored(title, rgbm(0.5, 0.8, 1.0, 1.0))
 
     if ui.checkbox("Enable Vibration", vibration.enable) then
         vibration.enable = not vibration.enable
@@ -247,10 +246,13 @@ local function renderTriggerVibrationSettings(id, title, vibration)
     return changed
 end
 
-local function sectionTitle(text)
+local function sectionTitle(text, context)
     ui.pushFont(ui.Font.Title)
     ui.text(text)
     ui.popFont()
+    if context then
+        ui.textColored(context, rgbm(0.5, 0.8, 1.0, 1.0))
+    end
 end
 
 local needsSave = false
@@ -336,6 +338,7 @@ function windowMain(dt)
     ui.pushFont(ui.Font.Title)
     ui.text("Select Trigger to Configure:")
     ui.popFont()
+    ui.text("Choose a trigger. All settings below apply to the selected trigger.")
     
     local currentTabText = currentTriggerTab == "rt" and "Right Trigger (Gas)" or "Left Trigger (Brake)"
     ui.combo("##triggerSelect", currentTabText, ui.ComboFlags.None, function()
@@ -349,8 +352,7 @@ function windowMain(dt)
 
     -- === Trigger Input ===
     ui.separator()
-    sectionTitle("Trigger Input")
-    ui.text("Input cleaning")
+    sectionTitle("Trigger Input", currentTabText)
     if ui.checkbox("Enable Hysteresis", ts.hysteresisEnable) then
         ts.hysteresisEnable = not ts.hysteresisEnable
         dirty = true
@@ -376,16 +378,14 @@ function windowMain(dt)
 
     -- Indicator vibration menjadi bagian terakhir dari Trigger Input
     ui.separator()
-    sectionTitle("Input Indicator (Vibrate)")
-    local triggerTitle = currentTriggerTab == "rt" and "Right Trigger (Gas)" or "Left Trigger (Brake)"
-    if renderTriggerVibrationSettings(currentTriggerTab .. "_vibration", triggerTitle, ts.vibration) then
+    sectionTitle("Input Indicator (Vibrate)", currentTabText)
+    if renderTriggerVibrationSettings(currentTriggerTab .. "_vibration", ts.vibration) then
         dirty = true
     end
 
     -- === Trigger Smooth ===
     ui.separator()
-    sectionTitle("Trigger Smooth")
-    ui.text("EMA smoothing")
+    sectionTitle("Trigger Smooth", currentTabText)
     if ui.checkbox("Enable Smoothing", ts.smoothingEnable) then
         ts.smoothingEnable = not ts.smoothingEnable
         dirty = true
@@ -396,9 +396,8 @@ function windowMain(dt)
 
     -- === Trigger Sensitivity ===
     ui.separator()
-    sectionTitle("Trigger Sensitivity")
-    ui.text("Response Curve")
-    if ui.checkbox("Enable Curve", ts.curve.enable) then
+    sectionTitle("Trigger Sensitivity", currentTabText)
+    if ui.checkbox("Enable Input Curve", ts.curve.enable) then
         ts.curve.enable = not ts.curve.enable
         dirty = true
     end
@@ -463,7 +462,7 @@ function windowMain(dt)
 
     -- === Preview ===
     ui.separator()
-    sectionTitle("Preview")
+    sectionTitle("Preview", currentTabText)
     
     if shared then
         local rawVal = currentTriggerTab == "rt" and (shared.rawGas or 0.0) or (shared.rawBrake or 0.0)
@@ -497,7 +496,7 @@ function windowMain(dt)
 
     if currentTriggerTab == "lt" then
         ui.separator()
-        sectionTitle("Signal Limit")
+        sectionTitle("Signal Limit", currentTabText)
         ui.textColored("Planned feature — not implemented yet.", rgbm(1.0, 0.8, 0.3, 1.0))
     end
 
