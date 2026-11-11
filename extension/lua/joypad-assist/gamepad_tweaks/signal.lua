@@ -16,7 +16,7 @@ local function createProcessor(triggerId)
         prevSmoothed = 0.0
     }
 
-    -- Mengembalikan: output akhir (S2 setelah smoothing), dan S1 (output hysteresis, input curve)
+    -- Mengembalikan: output akhir, S1 (Trigger Input), S2 (Trigger Smooth), S3 (Trigger Sensitivity)
     local function process(raw, dt)
         local cfg = config.state[triggerId] -- state terbaru ("rt" atau "lt")
 
@@ -42,26 +42,27 @@ local function createProcessor(triggerId)
         end
         s1 = math.max(0.0, math.min(1.0, s1))
 
-        -- 2. Response Curve  (S1 -> S2)
+        -- 2. Smoothing (EMA dt-normalized), diterapkan setelah Trigger Input
         local s2 = s1
-        if cfg.curve.enable then
-            s2 = curve(s1, cfg.curve.x, cfg.curve.y)
-        end
-
-        -- 3. Smoothing (EMA dt-normalized), diterapkan pada S2
-        local out = s2
         if cfg.smoothingEnable then
             -- Mencegah pembagian dengan nol jika time constant diatur ke 0
             if cfg.smoothingTimeConstant > 0.001 then
                 local factor = 1 - math.exp(-dt / cfg.smoothingTimeConstant)
-                out = state.prevSmoothed + (out - state.prevSmoothed) * factor
+                s2 = state.prevSmoothed + (s1 - state.prevSmoothed) * factor
             end
-            state.prevSmoothed = out
+            state.prevSmoothed = s2
         else
-            state.prevSmoothed = out
+            state.prevSmoothed = s2
         end
 
-        return math.max(0.0, math.min(1.0, out)), s1
+        -- 3. Trigger Sensitivity / Response Curve (S2 -> S3)
+        local s3 = s2
+        if cfg.curve.enable then
+            s3 = curve(s2, cfg.curve.x, cfg.curve.y)
+        end
+
+        local out = math.max(0.0, math.min(1.0, s3))
+        return out, s1, s2, out
     end
 
     local function reset()

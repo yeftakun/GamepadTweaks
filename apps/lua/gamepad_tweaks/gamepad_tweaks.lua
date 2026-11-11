@@ -54,7 +54,11 @@ local shared = ac.connect({
     rawBrake = ac.StructItem.float(),
     processedBrake = ac.StructItem.float(),
     s1Gas = ac.StructItem.float(),
-    s1Brake = ac.StructItem.float()
+    s1Brake = ac.StructItem.float(),
+    smoothGas = ac.StructItem.float(),
+    smoothBrake = ac.StructItem.float(),
+    sensitivityGas = ac.StructItem.float(),
+    sensitivityBrake = ac.StructItem.float()
 }, true)
 
 local state = {
@@ -178,6 +182,76 @@ loadConfig()
 
 local motorLabels = { [0] = "Left (Low Freq)", [1] = "Right (High Freq)" }
 local modeLabels = { [0] = "Proportional", [1] = "Static" }
+local vibrationLevels = { 0, 20, 40, 60, 80, 100 }
+
+local function vibrationPercentLabel(value)
+    return string.format("%.0f%%", value or 0)
+end
+
+local function renderVibrationLevelCombo(id, label, value, onChanged)
+    local changed = false
+    ui.pushID(id)
+    ui.combo(label, vibrationPercentLabel((value or 0) * 100), ui.ComboFlags.None, function()
+        for _, percent in ipairs(vibrationLevels) do
+            local selected = math.abs((value or 0) * 100 - percent) < 0.5
+            if ui.selectable(string.format("%d%%", percent), selected) then
+                onChanged(percent / 100)
+                changed = true
+            end
+        end
+    end)
+    ui.popID()
+    return changed
+end
+
+local function renderTriggerVibrationSettings(id, title, vibration)
+    local changed = false
+    ui.pushID(id)
+    ui.textColored(title, rgbm(0.5, 0.8, 1.0, 1.0))
+
+    if ui.checkbox("Enable Vibration", vibration.enable) then
+        vibration.enable = not vibration.enable
+        changed = true
+    end
+
+    ui.sameLine()
+    ui.combo("Motor", motorLabels[vibration.motor] or "Right (High Freq)", ui.ComboFlags.None, function()
+        if ui.selectable("Left (Low Freq)", vibration.motor == 0) then
+            vibration.motor = 0
+            changed = true
+        end
+        if ui.selectable("Right (High Freq)", vibration.motor == 1) then
+            vibration.motor = 1
+            changed = true
+        end
+    end)
+
+    ui.combo("Mode", modeLabels[vibration.mode] or "Proportional", ui.ComboFlags.None, function()
+        if ui.selectable("Proportional", vibration.mode == 0) then
+            vibration.mode = 0
+            changed = true
+        end
+        if ui.selectable("Static", vibration.mode == 1) then
+            vibration.mode = 1
+            changed = true
+        end
+    end)
+
+    if renderVibrationLevelCombo("max", "Max Vibration", vibration.maxVibrationPercent / 100, function(value)
+        vibration.maxVibrationPercent = value * 100
+    end) then
+        changed = true
+    end
+
+    ui.popID()
+    return changed
+end
+
+local function sectionTitle(text)
+    ui.pushFont(ui.Font.Title)
+    ui.text(text)
+    ui.popFont()
+end
 
 local needsSave = false
 local saveDelayTimer = 0.0
@@ -188,12 +262,11 @@ function windowMain(dt)
     local dirty = false
     local val, changed
     
-    -- === Global Settings ===
-    ui.pushFont(ui.Font.Title)
-    ui.text("Global Settings")
-    ui.popFont()
-    
-    val, changed = ui.slider("##native_mult", state.global.nativeVibrationMultiplier, 0.0, 5.0, "Native Vibration")
+    -- === Vibration Manager ===
+    sectionTitle("Vibration Manager")
+    ui.text("Native game effects")
+
+    val, changed = ui.slider("##native_mult", state.global.nativeVibrationMultiplier, 0.0, 5.0, "Native Vibration Gain")
     if changed then
         state.global.nativeVibrationMultiplier = val
         dirty = true
@@ -209,7 +282,7 @@ function windowMain(dt)
     
     if showEffectsConfig then
         ui.childWindow("effects_window", vec2(-1, 220), function()
-            ui.textColored("Individual Effect Multipliers", rgbm(0.5, 0.8, 1.0, 1.0))
+            ui.textColored("Individual Effect Intensities", rgbm(0.5, 0.8, 1.0, 1.0))
             ui.separator()
             
             local effs = {
@@ -227,13 +300,11 @@ function windowMain(dt)
                 ui.pushID(e.key)
                 ui.text(e.label)
                 ui.sameLine(140)
-                ui.pushItemWidth(100)
-                val, changed = ui.slider("##sld", state.effects[e.key].mult, 0.0, 1.0, "%.1fx")
-                if changed then
-                    state.effects[e.key].mult = val
+                if renderVibrationLevelCombo("intensity", "Intensity", state.effects[e.key].mult, function(value)
+                    state.effects[e.key].mult = value
+                end) then
                     dirty = true
                 end
-                ui.popItemWidth()
                 ui.sameLine()
                 ui.pushItemWidth(120)
                 local motorNames = {
@@ -259,9 +330,9 @@ function windowMain(dt)
             end
         end)
     end
-    ui.separator()
 
-    -- Pilihan Trigger Tab
+    -- Pilihan Trigger Tab: konteks untuk seluruh pengaturan trigger di bawahnya
+    ui.separator()
     ui.pushFont(ui.Font.Title)
     ui.text("Select Trigger to Configure:")
     ui.popFont()
@@ -276,36 +347,57 @@ function windowMain(dt)
     -- Render Pengaturan berdasarkan tab yang aktif
     local ts = state[currentTriggerTab]
 
-    -- === Hysteresis ===
-    ui.header("Hysteresis Deadzone")
+    -- === Trigger Input ===
+    ui.separator()
+    sectionTitle("Trigger Input")
+    ui.text("Input cleaning")
     if ui.checkbox("Enable Hysteresis", ts.hysteresisEnable) then
         ts.hysteresisEnable = not ts.hysteresisEnable
         dirty = true
     end
 
     val, changed = ui.slider("##hyst_up", ts.hysteresisThresholdUp, 0.0, 1.0, "Threshold Up: %.2f")
-    if changed then 
+    if changed then
         ts.hysteresisThresholdUp = val
-        -- Paksa Threshold Down agar tidak lebih besar dari Threshold Up
         if ts.hysteresisThresholdDown > val then
             ts.hysteresisThresholdDown = val
         end
-        dirty = true 
+        dirty = true
     end
 
     val, changed = ui.slider("##hyst_down", ts.hysteresisThresholdDown, 0.0, 1.0, "Threshold Down: %.2f")
-    if changed then 
+    if changed then
         ts.hysteresisThresholdDown = val
-        -- Paksa Threshold Up agar tidak lebih kecil dari Threshold Down
         if ts.hysteresisThresholdUp < val then
             ts.hysteresisThresholdUp = val
         end
-        dirty = true 
+        dirty = true
     end
 
-    -- === Response Curve (S1 -> S2) ===
+    -- Indicator vibration menjadi bagian terakhir dari Trigger Input
     ui.separator()
-    ui.header("Response Curve")
+    sectionTitle("Input Indicator (Vibrate)")
+    local triggerTitle = currentTriggerTab == "rt" and "Right Trigger (Gas)" or "Left Trigger (Brake)"
+    if renderTriggerVibrationSettings(currentTriggerTab .. "_vibration", triggerTitle, ts.vibration) then
+        dirty = true
+    end
+
+    -- === Trigger Smooth ===
+    ui.separator()
+    sectionTitle("Trigger Smooth")
+    ui.text("EMA smoothing")
+    if ui.checkbox("Enable Smoothing", ts.smoothingEnable) then
+        ts.smoothingEnable = not ts.smoothingEnable
+        dirty = true
+    end
+
+    val, changed = ui.slider("##smooth_tc", ts.smoothingTimeConstant, 0.001, 0.1, "Time Constant: %.3f s")
+    if changed then ts.smoothingTimeConstant = val; dirty = true end
+
+    -- === Trigger Sensitivity ===
+    ui.separator()
+    sectionTitle("Trigger Sensitivity")
+    ui.text("Response Curve")
     if ui.checkbox("Enable Curve", ts.curve.enable) then
         ts.curve.enable = not ts.curve.enable
         dirty = true
@@ -341,7 +433,7 @@ function windowMain(dt)
         ui.setTooltip("How far the knee sits from the straight line.\nBelow it: light pressure is dulled. Above it: sharper.\nLimited so the curve never becomes a dead zone.")
     end
 
-    -- Preview: kurva, titik kontrol (lingkaran kosong), dan posisi trigger sekarang (titik merah)
+    -- Preview kurva sensitivity dan posisi trigger saat ini
     local c = ts.curve
     local alpha = c.enable and 1.0 or 0.35
     local plotSize = 160
@@ -363,61 +455,50 @@ function windowMain(dt)
 
     local liveX = 0.0
     if shared then
-        liveX = (currentTriggerTab == "rt") and (shared.s1Gas or 0.0) or (shared.s1Brake or 0.0)
+        liveX = (currentTriggerTab == "rt") and (shared.smoothGas or 0.0) or (shared.smoothBrake or 0.0)
     end
     local liveY = c.enable and bezier(liveX, c.x, c.y) or liveX
     ui.drawCircle(P(c.x, c.y), 5, rgbm(0.3, 0.8, 1.0, alpha), 16, 1.5)
     ui.drawCircleFilled(P(liveX, liveY), 4, rgbm(1.0, 0.35, 0.25, 1.0), 12)
 
-    -- === Smoothing ===
+    -- === Preview ===
     ui.separator()
-    ui.header("Smoothing (EMA)")
-    if ui.checkbox("Enable Smoothing", ts.smoothingEnable) then
-        ts.smoothingEnable = not ts.smoothingEnable
-        dirty = true
-    end
-
-    val, changed = ui.slider("##smooth_tc", ts.smoothingTimeConstant, 0.001, 0.1, "Time Constant: %.3f s")
-    if changed then ts.smoothingTimeConstant = val; dirty = true end
-
-    -- === Vibration ===
-    ui.separator()
-    ui.header("Vibration Feedback")
-    if ui.checkbox("Enable Vibration", ts.vibration.enable) then
-        ts.vibration.enable = not ts.vibration.enable
-        dirty = true
-    end
-
-    ui.combo("Motor", motorLabels[ts.vibration.motor], ui.ComboFlags.None, function()
-        if ui.selectable("Left (Low Freq)", ts.vibration.motor == 0) then ts.vibration.motor = 0; dirty = true end
-        if ui.selectable("Right (High Freq)", ts.vibration.motor == 1) then ts.vibration.motor = 1; dirty = true end
-    end)
-
-    ui.combo("Mode", modeLabels[ts.vibration.mode], ui.ComboFlags.None, function()
-        if ui.selectable("Proportional", ts.vibration.mode == 0) then ts.vibration.mode = 0; dirty = true end
-        if ui.selectable("Static", ts.vibration.mode == 1) then ts.vibration.mode = 1; dirty = true end
-    end)
-
-    val, changed = ui.slider("##vib_max", ts.vibration.maxVibrationPercent, 0, 100, "Max Vibration: %.0f%%")
-    if changed then ts.vibration.maxVibrationPercent = val; dirty = true end
-
-    -- === Telemetry Preview ===
-    ui.separator()
-    ui.header("Live Telemetry Preview")
+    sectionTitle("Preview")
     
     if shared then
         local rawVal = currentTriggerTab == "rt" and (shared.rawGas or 0.0) or (shared.rawBrake or 0.0)
+        local inputVal = currentTriggerTab == "rt" and (shared.s1Gas or 0.0) or (shared.s1Brake or 0.0)
+        local smoothVal = currentTriggerTab == "rt" and (shared.smoothGas or 0.0) or (shared.smoothBrake or 0.0)
+        local sensitivityVal = currentTriggerTab == "rt" and (shared.sensitivityGas or 0.0) or (shared.sensitivityBrake or 0.0)
         local procVal = currentTriggerTab == "rt" and (shared.processedGas or 0.0) or (shared.processedBrake or 0.0)
         
-        ui.text("Raw Input:  ")
+        ui.text("Raw Input:")
         ui.sameLine(100)
         ui.progressBar(rawVal, vec2(-1, 14), string.format("%.1f%%", rawVal * 100))
-        
-        ui.text("Processed:  ")
+
+        ui.text("Trigger Input:")
+        ui.sameLine(100)
+        ui.progressBar(inputVal, vec2(-1, 14), string.format("%.1f%%", inputVal * 100))
+
+        ui.text("Trigger Smooth:")
+        ui.sameLine(100)
+        ui.progressBar(smoothVal, vec2(-1, 14), string.format("%.1f%%", smoothVal * 100))
+
+        ui.text("Trigger Sensitivity:")
+        ui.sameLine(100)
+        ui.progressBar(sensitivityVal, vec2(-1, 14), string.format("%.1f%%", sensitivityVal * 100))
+
+        ui.text("Processed Signal:")
         ui.sameLine(100)
         ui.progressBar(procVal, vec2(-1, 14), string.format("%.1f%%", procVal * 100))
     else
         ui.text("Waiting for telemetry data...")
+    end
+
+    if currentTriggerTab == "lt" then
+        ui.separator()
+        sectionTitle("Signal Limit")
+        ui.textColored("Planned feature — not implemented yet.", rgbm(1.0, 0.8, 0.3, 1.0))
     end
 
     -- === AutoSave Logic ===

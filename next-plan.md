@@ -10,7 +10,7 @@ Menyederhanakan UI menjadi beberapa bagian yang lebih mudah dipahami, sekaligus 
 
 Rebranding bagian pengaturan vibration menjadi **Vibration Manager**.
 
-Fokus bagian ini adalah mengatur setiap variabel getaran yang menjadi output, termasuk vibration dari trigger dan native game effects.
+Fokus bagian ini adalah mengatur variabel getaran output dari native game effects dan routing motor.
 
 Rencana perubahan:
 
@@ -47,11 +47,13 @@ Vibration Manager
 Trigger Option
   RT (Gas) / LT (Brake)
       ↓
-Trigger Sensitivity
-      ↓
 Trigger Input
+  input cleaning
+  Input Indicator (Vibrate)
       ↓
 Trigger Smooth
+      ↓
+Trigger Sensitivity
       ↓
 Preview
 ```
@@ -59,7 +61,8 @@ Preview
 Aturan selector:
 
 - Pengguna tetap memilih trigger yang ingin dikonfigurasi melalui opsi `RT (Gas)` atau `LT (Brake)`.
-- Bagian Trigger Sensitivity, Trigger Input, Trigger Smooth, dan Preview mengikuti trigger yang sedang dipilih.
+- Trigger Input, Input Indicator (Vibrate), Trigger Smooth, Trigger Sensitivity, dan Preview mengikuti trigger yang sedang dipilih.
+- Selector berlaku untuk satu trigger aktif pada satu waktu, bukan untuk menampilkan konfigurasi RT dan LT sekaligus.
 - Jangan memindahkan selector trigger ke bawah bagian pemrosesan.
 - Jangan membuat halaman konfigurasi terpisah untuk RT dan LT jika tidak diperlukan.
 - Fitur yang hanya relevan untuk rem harus ditampilkan secara kontekstual pada opsi `LT (Brake)`.
@@ -99,6 +102,8 @@ Rencana perubahan:
 - Tempatkan pengaturan yang berkaitan dengan pembersihan input dasar di bagian ini.
 - Tampilkan indikator input untuk RT dan LT.
 - Pertahankan indikator pedal/trigger yang saat ini sudah berfungsi.
+- Tempatkan bagian `Input Indicator (Vibrate)` di bagian paling akhir dari Trigger Input.
+- Gunakan selector trigger aktif untuk mengatur indikator vibration dari satu trigger yang dipilih.
 - Pastikan indikator menggunakan sumber data yang benar dan memperlihatkan nilai raw input yang diterima sistem.
 - Bedakan dengan jelas raw input dan processed input.
 - Tambahkan verifikasi untuk kondisi berikut:

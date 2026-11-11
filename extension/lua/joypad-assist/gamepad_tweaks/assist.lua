@@ -12,8 +12,12 @@ local shared = ac.connect({
     processedGas = ac.StructItem.float(),
     rawBrake = ac.StructItem.float(),
     processedBrake = ac.StructItem.float(),
-    s1Gas = ac.StructItem.float(),   -- output hysteresis (input curve), untuk titik live di preview
-    s1Brake = ac.StructItem.float()
+    s1Gas = ac.StructItem.float(),   -- output Trigger Input
+    s1Brake = ac.StructItem.float(),
+    smoothGas = ac.StructItem.float(),
+    smoothBrake = ac.StructItem.float(),
+    sensitivityGas = ac.StructItem.float(),
+    sensitivityBrake = ac.StructItem.float()
 }, true)
 
 local gasProcessor = signal.create('rt')
@@ -35,9 +39,10 @@ function script.update(dt)
     local rawBrake = data.brake
 
     -- 1. Signal Processing
-    local gasS1, brakeS1
-    data.gas, gasS1 = gasProcessor.process(data.gas, dt)
-    data.brake, brakeS1 = brakeProcessor.process(data.brake, dt)
+    local gasS1, gasS2, gasS3
+    local brakeS1, brakeS2, brakeS3
+    data.gas, gasS1, gasS2, gasS3 = gasProcessor.process(data.gas, dt)
+    data.brake, brakeS1, brakeS2, brakeS3 = brakeProcessor.process(data.brake, dt)
 
     -- 2. Vibration Feedback
     vibration.apply(data)
@@ -50,6 +55,10 @@ function script.update(dt)
         shared.processedBrake = data.brake
         shared.s1Gas = gasS1
         shared.s1Brake = brakeS1
+        shared.smoothGas = gasS2
+        shared.smoothBrake = brakeS2
+        shared.sensitivityGas = gasS3
+        shared.sensitivityBrake = brakeS3
     end
 end
 
