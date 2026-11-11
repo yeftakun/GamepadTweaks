@@ -258,7 +258,7 @@ end
 
 local needsSave = false
 local saveDelayTimer = 0.0
-local activeMainTab = "vibration" -- "vibration" atau "trigger_signal"
+local activeMainTab = "trigger_signal" -- "trigger_signal", "vibration", atau "more"
 local currentTriggerTab = "rt" -- "rt" atau "lt"
 
 function windowMain(dt)
@@ -266,12 +266,16 @@ function windowMain(dt)
     local val, changed
     
     -- === Main tabs ===
+    if ui.button("Trigger Signal", vec2(150, 0)) then
+        activeMainTab = "trigger_signal"
+    end
+    ui.sameLine(0, 6)
     if ui.button("Vibration", vec2(120, 0)) then
         activeMainTab = "vibration"
     end
     ui.sameLine(0, 6)
-    if ui.button("Trigger Signal", vec2(150, 0)) then
-        activeMainTab = "trigger_signal"
+    if ui.button("More", vec2(90, 0)) then
+        activeMainTab = "more"
     end
     ui.separator()
 
@@ -337,7 +341,7 @@ function windowMain(dt)
             ui.popItemWidth()
             ui.popID()
         end
-    else
+    elseif activeMainTab == "trigger_signal" then
         -- Pilihan Trigger: konteks untuk seluruh pengaturan di tab Trigger Signal
         ui.pushFont(ui.Font.Title)
         ui.text("Select Trigger to Configure:")
@@ -504,6 +508,8 @@ function windowMain(dt)
             infoMarker(SIGNAL_LIMIT_HELP)
             ui.textColored("Planned feature — not implemented yet.", rgbm(1.0, 0.8, 0.3, 1.0))
         end
+    else
+        -- More: reserved for future features.
     end
 
     -- === AutoSave Logic ===
