@@ -258,250 +258,252 @@ end
 
 local needsSave = false
 local saveDelayTimer = 0.0
+local activeMainTab = "vibration" -- "vibration" atau "trigger_signal"
 local currentTriggerTab = "rt" -- "rt" atau "lt"
-local showEffectsConfig = false
 
 function windowMain(dt)
     local dirty = false
     local val, changed
     
-    -- === Vibration Manager ===
-    sectionTitle("Vibration Manager")
-    infoMarker(VIBRATION_MANAGER_HELP)
-    ui.text("Native game effects")
-
-    val, changed = ui.slider("##native_mult", state.global.nativeVibrationMultiplier, 0.0, 5.0, "Native Vibration Gain")
-    if changed then
-        state.global.nativeVibrationMultiplier = val
-        dirty = true
+    -- === Main tabs ===
+    if ui.button("Vibration", vec2(120, 0)) then
+        activeMainTab = "vibration"
     end
-    if state.global.nativeVibrationMultiplier > 0.0 then
-        ui.sameLine(0, 10)
-        ui.textColored(string.format("(%.1fx)", state.global.nativeVibrationMultiplier), rgbm(1, 1, 0, 1))
+    ui.sameLine(0, 6)
+    if ui.button("Trigger Signal", vec2(150, 0)) then
+        activeMainTab = "trigger_signal"
     end
-    
-    if ui.button("Available Effects", vec2(-1, 0)) then
-        showEffectsConfig = not showEffectsConfig
-    end
-    
-    if showEffectsConfig then
-        ui.childWindow("effects_window", vec2(-1, 220), function()
-            ui.textColored("Individual Effect Intensities", rgbm(0.5, 0.8, 1.0, 1.0))
-            ui.separator()
-            
-            local effs = {
-                { key = "slip", label = "Tire Slip" },
-                { key = "kerb", label = "Kerbs / Road" },
-                { key = "abs", label = "ABS" },
-                { key = "collision", label = "Collisions" },
-                { key = "gforce", label = "G-Force / Suspension" },
-                { key = "offroad", label = "Off-road / Gravel" },
-                { key = "engine", label = "Engine RPM" },
-                { key = "gearshift", label = "Gearshifts" }
-            }
-            
-            for _, e in ipairs(effs) do
-                ui.pushID(e.key)
-                ui.text(e.label)
-                ui.sameLine(140)
-                if renderVibrationLevelCombo("intensity", "Intensity", state.effects[e.key].mult, function(value)
-                    state.effects[e.key].mult = value
-                end) then
-                    dirty = true
-                end
-                ui.sameLine()
-                ui.pushItemWidth(120)
-                local motorNames = {
-                    [0] = "Left (Low)", 
-                    [1] = "Right (Hi)", 
-                    [2] = "Both"
-                }
-                local currentMotor = state.effects[e.key].motor
-                
-                ui.combo("##mot", motorNames[currentMotor] or "Both", ui.ComboFlags.None, function()
-                    if ui.selectable("Left (Low)", currentMotor == 0) then 
-                        state.effects[e.key].motor = 0; dirty = true 
-                    end
-                    if ui.selectable("Right (Hi)", currentMotor == 1) then 
-                        state.effects[e.key].motor = 1; dirty = true 
-                    end
-                    if ui.selectable("Both", currentMotor == 2) then 
-                        state.effects[e.key].motor = 2; dirty = true 
-                    end
-                end)
-                ui.popItemWidth()
-                ui.popID()
-            end
-        end)
-    end
-
-    -- Pilihan Trigger Tab: konteks untuk seluruh pengaturan trigger di bawahnya
-    ui.separator()
-    ui.pushFont(ui.Font.Title)
-    ui.text("Select Trigger to Configure:")
-    ui.popFont()
-    ui.text("Choose a trigger. All settings below apply to the selected trigger.")
-    
-    local currentTabText = currentTriggerTab == "rt" and "Right Trigger (Gas)" or "Left Trigger (Brake)"
-    ui.combo("##triggerSelect", currentTabText, ui.ComboFlags.None, function()
-        if ui.selectable("Right Trigger (Gas)", currentTriggerTab == "rt") then currentTriggerTab = "rt" end
-        if ui.selectable("Left Trigger (Brake)", currentTriggerTab == "lt") then currentTriggerTab = "lt" end
-    end)
     ui.separator()
 
-    -- Render Pengaturan berdasarkan tab yang aktif
-    local ts = state[currentTriggerTab]
+    if activeMainTab == "vibration" then
+        -- === Vibration Manager ===
+        sectionTitle("Vibration Manager")
+        infoMarker(VIBRATION_MANAGER_HELP)
+        ui.text("Native game effects")
 
-    -- === Trigger Input ===
-    ui.separator()
-    sectionTitle("Trigger Input", currentTabText)
-    infoMarker(TRIGGER_INPUT_HELP)
-    if ui.checkbox("Enable Hysteresis", ts.hysteresisEnable) then
-        ts.hysteresisEnable = not ts.hysteresisEnable
-        dirty = true
-    end
-
-    val, changed = ui.slider("##hyst_up", ts.hysteresisThresholdUp, 0.0, 1.0, "Threshold Up: %.2f")
-    if changed then
-        ts.hysteresisThresholdUp = val
-        if ts.hysteresisThresholdDown > val then
-            ts.hysteresisThresholdDown = val
-        end
-        dirty = true
-    end
-
-    val, changed = ui.slider("##hyst_down", ts.hysteresisThresholdDown, 0.0, 1.0, "Threshold Down: %.2f")
-    if changed then
-        ts.hysteresisThresholdDown = val
-        if ts.hysteresisThresholdUp < val then
-            ts.hysteresisThresholdUp = val
-        end
-        dirty = true
-    end
-
-    -- Indicator vibration menjadi bagian terakhir dari Trigger Input
-    ui.separator()
-    sectionTitle("Input Indicator (Vibrate)", currentTabText)
-    infoMarker(INPUT_INDICATOR_HELP)
-    if renderTriggerVibrationSettings(currentTriggerTab .. "_vibration", ts.vibration) then
-        dirty = true
-    end
-
-    -- === Trigger Smooth ===
-    ui.separator()
-    sectionTitle("Trigger Smooth", currentTabText)
-    infoMarker(TRIGGER_SMOOTH_HELP)
-    if ui.checkbox("Enable Smoothing", ts.smoothingEnable) then
-        ts.smoothingEnable = not ts.smoothingEnable
-        dirty = true
-    end
-
-    val, changed = ui.slider("##smooth_tc", ts.smoothingTimeConstant, 0.001, 0.1, "Time Constant: %.3f s")
-    if changed then ts.smoothingTimeConstant = val; dirty = true end
-
-    -- === Trigger Sensitivity ===
-    ui.separator()
-    sectionTitle("Trigger Sensitivity", currentTabText)
-    infoMarker(CURVE_HELP)
-    if ui.checkbox("Enable Input Curve", ts.curve.enable) then
-        ts.curve.enable = not ts.curve.enable
-        dirty = true
-    end
-
-    for i, preset in ipairs(CURVE_PRESETS) do
-        if i > 1 then ui.sameLine(0, 6) end
-        if ui.button(preset.name) then
-            ts.curve.x, ts.curve.y = clampKnee(preset.x, preset.y)
+        val, changed = ui.slider("##native_mult", state.global.nativeVibrationMultiplier, 0.0, 5.0, "Native Vibration Gain")
+        if changed then
+            state.global.nativeVibrationMultiplier = val
             dirty = true
         end
-        if ui.itemHovered() then ui.setTooltip(preset.tip) end
-    end
+        if state.global.nativeVibrationMultiplier > 0.0 then
+            ui.sameLine(0, 10)
+            ui.textColored(string.format("(%.1fx)", state.global.nativeVibrationMultiplier), rgbm(1, 1, 0, 1))
+        end
 
-    val, changed = ui.slider("##curve_x", ts.curve.x, 0.05, 0.95, "Knee X (position): %.2f")
-    if changed then
-        ts.curve.x, ts.curve.y = clampKnee(val, ts.curve.y)
-        dirty = true
-    end
-    if ui.itemHovered() then
-        ui.setTooltip("Where the bend happens along the pressure axis.\nHigher = the flat part lasts longer.")
-    end
-
-    val, changed = ui.slider("##curve_y", ts.curve.y, 0.05, 0.95, "Knee Y (depth): %.2f")
-    if changed then
-        ts.curve.x, ts.curve.y = clampKnee(ts.curve.x, val)
-        dirty = true
-    end
-    if ui.itemHovered() then
-        ui.setTooltip("How far the knee sits from the straight line.\nBelow it: light pressure is dulled. Above it: sharper.\nLimited so the curve never becomes a dead zone.")
-    end
-
-    -- Preview kurva sensitivity dan posisi trigger saat ini
-    local c = ts.curve
-    local alpha = c.enable and 1.0 or 0.35
-    local plotSize = 160
-    local origin = ui.getCursor()
-    local function P(px, py)
-        return vec2(origin.x + 4 + px * plotSize, origin.y + 4 + (1 - py) * plotSize)
-    end
-    ui.dummy(vec2(plotSize + 8, plotSize + 8))
-    ui.drawRectFilled(P(0, 1), P(1, 0), rgbm(0.05, 0.07, 0.09, 0.85))
-    ui.drawRect(P(0, 1), P(1, 0), rgbm(1, 1, 1, 0.25))
-    ui.drawLine(P(0, 0), P(1, 1), rgbm(1, 1, 1, 0.35), 1)
-    ui.drawLine(P(0, 0), P(c.x, c.y), rgbm(0.3, 0.8, 1.0, 0.25 * alpha), 1)
-    ui.drawLine(P(c.x, c.y), P(1, 1), rgbm(0.3, 0.8, 1.0, 0.25 * alpha), 1)
-    for i = 0, 40 do
-        local t = i / 40
-        ui.pathLineTo(P(t, bezier(t, c.x, c.y)))
-    end
-    ui.pathStroke(rgbm(0.3, 0.8, 1.0, alpha), false, 2.5)
-
-    local liveX = 0.0
-    if shared then
-        liveX = (currentTriggerTab == "rt") and (shared.smoothGas or 0.0) or (shared.smoothBrake or 0.0)
-    end
-    local liveY = c.enable and bezier(liveX, c.x, c.y) or liveX
-    ui.drawCircle(P(c.x, c.y), 5, rgbm(0.3, 0.8, 1.0, alpha), 16, 1.5)
-    ui.drawCircleFilled(P(liveX, liveY), 4, rgbm(1.0, 0.35, 0.25, 1.0), 12)
-
-    -- === Preview ===
-    ui.separator()
-    sectionTitle("Preview", currentTabText)
-    
-    if shared then
-        local rawVal = currentTriggerTab == "rt" and (shared.rawGas or 0.0) or (shared.rawBrake or 0.0)
-        local inputVal = currentTriggerTab == "rt" and (shared.s1Gas or 0.0) or (shared.s1Brake or 0.0)
-        local smoothVal = currentTriggerTab == "rt" and (shared.smoothGas or 0.0) or (shared.smoothBrake or 0.0)
-        local sensitivityVal = currentTriggerTab == "rt" and (shared.sensitivityGas or 0.0) or (shared.sensitivityBrake or 0.0)
-        local procVal = currentTriggerTab == "rt" and (shared.processedGas or 0.0) or (shared.processedBrake or 0.0)
-        
-        ui.text("Raw Input:")
-        ui.sameLine(100)
-        ui.progressBar(rawVal, vec2(-1, 14), string.format("%.1f%%", rawVal * 100))
-
-        ui.text("Trigger Input:")
-        ui.sameLine(100)
-        ui.progressBar(inputVal, vec2(-1, 14), string.format("%.1f%%", inputVal * 100))
-
-        ui.text("Trigger Smooth:")
-        ui.sameLine(100)
-        ui.progressBar(smoothVal, vec2(-1, 14), string.format("%.1f%%", smoothVal * 100))
-
-        ui.text("Trigger Sensitivity:")
-        ui.sameLine(100)
-        ui.progressBar(sensitivityVal, vec2(-1, 14), string.format("%.1f%%", sensitivityVal * 100))
-
-        ui.text("Processed Signal:")
-        ui.sameLine(100)
-        ui.progressBar(procVal, vec2(-1, 14), string.format("%.1f%%", procVal * 100))
-    else
-        ui.text("Waiting for telemetry data...")
-    end
-
-    if currentTriggerTab == "lt" then
+        ui.textColored("Individual Effect Intensities", rgbm(0.5, 0.8, 1.0, 1.0))
         ui.separator()
-        sectionTitle("Signal Limit", currentTabText)
-        infoMarker(SIGNAL_LIMIT_HELP)
-        ui.textColored("Planned feature — not implemented yet.", rgbm(1.0, 0.8, 0.3, 1.0))
+
+        local effs = {
+            { key = "slip", label = "Tire Slip" },
+            { key = "kerb", label = "Kerbs / Road" },
+            { key = "abs", label = "ABS" },
+            { key = "collision", label = "Collisions" },
+            { key = "gforce", label = "G-Force / Suspension" },
+            { key = "offroad", label = "Off-road / Gravel" },
+            { key = "engine", label = "Engine RPM" },
+            { key = "gearshift", label = "Gearshifts" }
+        }
+
+        for _, e in ipairs(effs) do
+            ui.pushID(e.key)
+            ui.text(e.label)
+            ui.sameLine(140)
+            if renderVibrationLevelCombo("intensity", "Intensity", state.effects[e.key].mult, function(value)
+                state.effects[e.key].mult = value
+            end) then
+                dirty = true
+            end
+            ui.sameLine()
+            ui.pushItemWidth(120)
+            local motorNames = {
+                [0] = "Left (Low)",
+                [1] = "Right (Hi)",
+                [2] = "Both"
+            }
+            local currentMotor = state.effects[e.key].motor
+
+            ui.combo("##mot", motorNames[currentMotor] or "Both", ui.ComboFlags.None, function()
+                if ui.selectable("Left (Low)", currentMotor == 0) then
+                    state.effects[e.key].motor = 0; dirty = true
+                end
+                if ui.selectable("Right (Hi)", currentMotor == 1) then
+                    state.effects[e.key].motor = 1; dirty = true
+                end
+                if ui.selectable("Both", currentMotor == 2) then
+                    state.effects[e.key].motor = 2; dirty = true
+                end
+            end)
+            ui.popItemWidth()
+            ui.popID()
+        end
+    else
+        -- Pilihan Trigger: konteks untuk seluruh pengaturan di tab Trigger Signal
+        ui.pushFont(ui.Font.Title)
+        ui.text("Select Trigger to Configure:")
+        ui.popFont()
+        ui.text("Choose a trigger. All settings below apply to the selected trigger.")
+
+        local currentTabText = currentTriggerTab == "rt" and "Right Trigger (Gas)" or "Left Trigger (Brake)"
+        ui.combo("##triggerSelect", currentTabText, ui.ComboFlags.None, function()
+            if ui.selectable("Right Trigger (Gas)", currentTriggerTab == "rt") then currentTriggerTab = "rt" end
+            if ui.selectable("Left Trigger (Brake)", currentTriggerTab == "lt") then currentTriggerTab = "lt" end
+        end)
+        ui.separator()
+
+        -- Render pengaturan berdasarkan trigger yang dipilih
+        local ts = state[currentTriggerTab]
+
+        -- === Trigger Input ===
+        sectionTitle("Trigger Input", currentTabText)
+        infoMarker(TRIGGER_INPUT_HELP)
+        if ui.checkbox("Enable Hysteresis", ts.hysteresisEnable) then
+            ts.hysteresisEnable = not ts.hysteresisEnable
+            dirty = true
+        end
+
+        val, changed = ui.slider("##hyst_up", ts.hysteresisThresholdUp, 0.0, 1.0, "Threshold Up: %.2f")
+        if changed then
+            ts.hysteresisThresholdUp = val
+            if ts.hysteresisThresholdDown > val then
+                ts.hysteresisThresholdDown = val
+            end
+            dirty = true
+        end
+
+        val, changed = ui.slider("##hyst_down", ts.hysteresisThresholdDown, 0.0, 1.0, "Threshold Down: %.2f")
+        if changed then
+            ts.hysteresisThresholdDown = val
+            if ts.hysteresisThresholdUp < val then
+                ts.hysteresisThresholdUp = val
+            end
+            dirty = true
+        end
+
+        -- Indicator vibration menjadi bagian terakhir dari Trigger Input
+        ui.separator()
+        sectionTitle("Input Indicator (Vibrate)", currentTabText)
+        infoMarker(INPUT_INDICATOR_HELP)
+        if renderTriggerVibrationSettings(currentTriggerTab .. "_vibration", ts.vibration) then
+            dirty = true
+        end
+
+        -- === Trigger Smooth ===
+        ui.separator()
+        sectionTitle("Trigger Smooth", currentTabText)
+        infoMarker(TRIGGER_SMOOTH_HELP)
+        if ui.checkbox("Enable Smoothing", ts.smoothingEnable) then
+            ts.smoothingEnable = not ts.smoothingEnable
+            dirty = true
+        end
+
+        val, changed = ui.slider("##smooth_tc", ts.smoothingTimeConstant, 0.001, 0.1, "Time Constant: %.3f s")
+        if changed then ts.smoothingTimeConstant = val; dirty = true end
+
+        -- === Trigger Sensitivity ===
+        ui.separator()
+        sectionTitle("Trigger Sensitivity", currentTabText)
+        infoMarker(CURVE_HELP)
+        if ui.checkbox("Enable Input Curve", ts.curve.enable) then
+            ts.curve.enable = not ts.curve.enable
+            dirty = true
+        end
+
+        for i, preset in ipairs(CURVE_PRESETS) do
+            if i > 1 then ui.sameLine(0, 6) end
+            if ui.button(preset.name) then
+                ts.curve.x, ts.curve.y = clampKnee(preset.x, preset.y)
+                dirty = true
+            end
+            if ui.itemHovered() then ui.setTooltip(preset.tip) end
+        end
+
+        val, changed = ui.slider("##curve_x", ts.curve.x, 0.05, 0.95, "Knee X (position): %.2f")
+        if changed then
+            ts.curve.x, ts.curve.y = clampKnee(val, ts.curve.y)
+            dirty = true
+        end
+        if ui.itemHovered() then
+            ui.setTooltip("Where the bend happens along the pressure axis.\nHigher = the flat part lasts longer.")
+        end
+
+        val, changed = ui.slider("##curve_y", ts.curve.y, 0.05, 0.95, "Knee Y (depth): %.2f")
+        if changed then
+            ts.curve.x, ts.curve.y = clampKnee(ts.curve.x, val)
+            dirty = true
+        end
+        if ui.itemHovered() then
+            ui.setTooltip("How far the knee sits from the straight line.\nBelow it: light pressure is dulled. Above it: sharper.\nLimited so the curve never becomes a dead zone.")
+        end
+
+        -- Preview kurva sensitivity dan posisi trigger saat ini
+        local c = ts.curve
+        local alpha = c.enable and 1.0 or 0.35
+        local plotSize = 160
+        local origin = ui.getCursor()
+        local function P(px, py)
+            return vec2(origin.x + 4 + px * plotSize, origin.y + 4 + (1 - py) * plotSize)
+        end
+        ui.dummy(vec2(plotSize + 8, plotSize + 8))
+        ui.drawRectFilled(P(0, 1), P(1, 0), rgbm(0.05, 0.07, 0.09, 0.85))
+        ui.drawRect(P(0, 1), P(1, 0), rgbm(1, 1, 1, 0.25))
+        ui.drawLine(P(0, 0), P(1, 1), rgbm(1, 1, 1, 0.35), 1)
+        ui.drawLine(P(0, 0), P(c.x, c.y), rgbm(0.3, 0.8, 1.0, 0.25 * alpha), 1)
+        ui.drawLine(P(c.x, c.y), P(1, 1), rgbm(0.3, 0.8, 1.0, 0.25 * alpha), 1)
+        for i = 0, 40 do
+            local t = i / 40
+            ui.pathLineTo(P(t, bezier(t, c.x, c.y)))
+        end
+        ui.pathStroke(rgbm(0.3, 0.8, 1.0, alpha), false, 2.5)
+
+        local liveX = 0.0
+        if shared then
+            liveX = (currentTriggerTab == "rt") and (shared.smoothGas or 0.0) or (shared.smoothBrake or 0.0)
+        end
+        local liveY = c.enable and bezier(liveX, c.x, c.y) or liveX
+        ui.drawCircle(P(c.x, c.y), 5, rgbm(0.3, 0.8, 1.0, alpha), 16, 1.5)
+        ui.drawCircleFilled(P(liveX, liveY), 4, rgbm(1.0, 0.35, 0.25, 1.0), 12)
+
+        -- === Preview ===
+        ui.separator()
+        sectionTitle("Preview", currentTabText)
+        
+        if shared then
+            local rawVal = currentTriggerTab == "rt" and (shared.rawGas or 0.0) or (shared.rawBrake or 0.0)
+            local inputVal = currentTriggerTab == "rt" and (shared.s1Gas or 0.0) or (shared.s1Brake or 0.0)
+            local smoothVal = currentTriggerTab == "rt" and (shared.smoothGas or 0.0) or (shared.smoothBrake or 0.0)
+            local sensitivityVal = currentTriggerTab == "rt" and (shared.sensitivityGas or 0.0) or (shared.sensitivityBrake or 0.0)
+            local procVal = currentTriggerTab == "rt" and (shared.processedGas or 0.0) or (shared.processedBrake or 0.0)
+
+            ui.text("Raw Input:")
+            ui.sameLine(100)
+            ui.progressBar(rawVal, vec2(-1, 14), string.format("%.1f%%", rawVal * 100))
+
+            ui.text("Trigger Input:")
+            ui.sameLine(100)
+            ui.progressBar(inputVal, vec2(-1, 14), string.format("%.1f%%", inputVal * 100))
+
+            ui.text("Trigger Smooth:")
+            ui.sameLine(100)
+            ui.progressBar(smoothVal, vec2(-1, 14), string.format("%.1f%%", smoothVal * 100))
+
+            ui.text("Trigger Sensitivity:")
+            ui.sameLine(100)
+            ui.progressBar(sensitivityVal, vec2(-1, 14), string.format("%.1f%%", sensitivityVal * 100))
+
+            ui.text("Processed Signal:")
+            ui.sameLine(100)
+            ui.progressBar(procVal, vec2(-1, 14), string.format("%.1f%%", procVal * 100))
+        else
+            ui.text("Waiting for telemetry data...")
+        end
+
+        if currentTriggerTab == "lt" then
+            ui.separator()
+            sectionTitle("Signal Limit", currentTabText)
+            infoMarker(SIGNAL_LIMIT_HELP)
+            ui.textColored("Planned feature — not implemented yet.", rgbm(1.0, 0.8, 0.3, 1.0))
+        end
     end
 
     -- === AutoSave Logic ===
