@@ -177,22 +177,25 @@ local motorLabels = { [0] = "Left (Low Freq)", [1] = "Right (High Freq)" }
 local modeLabels = { [0] = "Proportional", [1] = "Static" }
 local vibrationLevels = { 0, 20, 40, 60, 80, 100 }
 
-local function vibrationPercentLabel(value)
-    return string.format("%.0f%%", value or 0)
-end
-
-local function renderVibrationLevelCombo(id, label, value, onChanged)
+local function renderVibrationLevelSlider(id, label, value, onChanged)
     local changed = false
     ui.pushID(id)
-    ui.combo(label, vibrationPercentLabel((value or 0) * 100), ui.ComboFlags.None, function()
-        for _, percent in ipairs(vibrationLevels) do
-            local selected = math.abs((value or 0) * 100 - percent) < 0.5
-            if ui.selectable(string.format("%d%%", percent), selected) then
-                onChanged(percent / 100)
-                changed = true
-            end
-        end
-    end)
+    local level = math.floor(math.max(0, math.min(1, value or 0)) * 5 + 0.5)
+    local percent = vibrationLevels[level + 1]
+    local sliderValue, sliderChanged = ui.slider(
+        "##level",
+        level,
+        0,
+        5,
+        string.format("%s: %%.0f", label)
+    )
+    ui.sameLine(0, 8)
+    ui.text(string.format("(%d%%)", percent))
+    if sliderChanged then
+        local selectedLevel = math.max(0, math.min(5, math.floor(sliderValue + 0.5)))
+        onChanged(selectedLevel / 5)
+        changed = true
+    end
     ui.popID()
     return changed
 end
@@ -229,7 +232,7 @@ local function renderTriggerVibrationSettings(id, vibration)
         end
     end)
 
-    if renderVibrationLevelCombo("max", "Max Vibration", vibration.maxVibrationPercent / 100, function(value)
+    if renderVibrationLevelSlider("max", "Max Vibration", vibration.maxVibrationPercent / 100, function(value)
         vibration.maxVibrationPercent = value * 100
     end) then
         changed = true
@@ -313,7 +316,7 @@ function windowMain(dt)
             ui.pushID(e.key)
             ui.text(e.label)
             ui.sameLine(140)
-            if renderVibrationLevelCombo("intensity", "Intensity", state.effects[e.key].mult, function(value)
+            if renderVibrationLevelSlider("intensity", "Intensity", state.effects[e.key].mult, function(value)
                 state.effects[e.key].mult = value
             end) then
                 dirty = true
