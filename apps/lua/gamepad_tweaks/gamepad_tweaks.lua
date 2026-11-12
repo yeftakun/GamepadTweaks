@@ -1,4 +1,6 @@
 local cfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/gamepad_tweaks.ini'
+local exportCfgPath = ac.getFolder(ac.FolderID.ExtCfgUser) .. '/gamepad_tweaks_export.ini'
+local configMessage = nil
 
 -- === Response Curve helpers (harus sama dengan config.lua / signal.lua di sisi script) ===
 local MIN_SLOPE = 0.2
@@ -118,8 +120,8 @@ local function saveTriggerConfig(cfg, prefix, ts)
     cfg:set(prefix .. '_VIBRATION', 'MAX', ts.vibration.maxVibrationPercent)
 end
 
-local function loadConfig()
-    local cfg = ac.INIConfig.load(cfgPath)
+local function loadConfig(path)
+    local cfg = ac.INIConfig.load(path or cfgPath)
     state.global.nativeVibrationMultiplier = cfg:get('GLOBAL', 'NATIVE_MULTIPLIER', 1.0)
     
     state.effects.slip.mult = cfg:get('EFFECTS', 'SLIP', 1.0)
@@ -144,8 +146,8 @@ local function loadConfig()
     loadTriggerConfig(cfg, 'LT', state.lt)
 end
 
-local function saveConfig()
-    local cfg = ac.INIConfig.load(cfgPath)
+local function saveConfig(path)
+    local cfg = ac.INIConfig.load(path or cfgPath)
     cfg:set('GLOBAL', 'NATIVE_MULTIPLIER', state.global.nativeVibrationMultiplier)
     
     cfg:set('EFFECTS', 'SLIP', state.effects.slip.mult)
@@ -168,7 +170,25 @@ local function saveConfig()
 
     saveTriggerConfig(cfg, 'RT', state.rt)
     saveTriggerConfig(cfg, 'LT', state.lt)
-    cfg:save(cfgPath)
+    cfg:save(path or cfgPath)
+end
+
+local function exportConfig()
+    saveConfig(exportCfgPath)
+    configMessage = "Configuration exported."
+end
+
+local function importConfig()
+    local file = io.open(exportCfgPath, 'r')
+    if not file then
+        configMessage = "No exported configuration found."
+        return
+    end
+    file:close()
+
+    loadConfig(exportCfgPath)
+    saveConfig()
+    configMessage = "Configuration imported."
 end
 
 loadConfig()
@@ -519,7 +539,30 @@ function windowMain(dt)
             ui.textColored("Planned feature — not implemented yet.", rgbm(1.0, 0.8, 0.3, 1.0))
         end
     else
-        -- More: reserved for future features.
+        -- === More ===
+        sectionTitle("My Configuration")
+        ui.text("Save or restore your GamepadTweaks configuration.")
+        ui.text("Manual export/import folder:")
+        ui.textColored("%USER%\\Documents\\Assetto Corsa\\cfg\\extension", rgbm(0.5, 0.8, 1.0, 1.0))
+        ui.text("File: gamepad_tweaks_export.ini")
+
+        if ui.button("Export", vec2(120, 0)) then
+            exportConfig()
+        end
+        ui.sameLine(0, 8)
+        if ui.button("Import", vec2(120, 0)) then
+            importConfig()
+        end
+        if configMessage then
+            ui.textColored(configMessage, rgbm(0.5, 0.8, 1.0, 1.0))
+        end
+
+        ui.separator()
+        sectionTitle("About GamepadTweaks")
+        ui.text("Trigger signal tuning and vibration control.")
+        ui.text("Version: 0.3")
+        ui.text("Author: Yefta Asyel")
+        ui.text("GitHub: yeftakun")
     end
 
     -- === AutoSave Logic ===
