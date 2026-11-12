@@ -66,7 +66,9 @@ local function createProcessor(triggerId)
             local limit = math.max(0.0, math.min(1.0, (cfg.signalLimitPercent or 100) / 100.0))
             out = math.min(out, limit)
         end
-        return out, s1, s2, out
+        -- S3 tetap dikembalikan sebelum Signal Limit agar Preview dapat
+        -- membedakan output Trigger Sensitivity dari output final.
+        return out, s1, s2, s3
     end
 
     local function reset()
