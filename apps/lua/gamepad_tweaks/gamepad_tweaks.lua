@@ -491,23 +491,23 @@ function windowMain(dt)
 
             ui.text("Raw Input:")
             ui.sameLine(100)
-            ui.progressBar(rawVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", rawVal * 100))
+            ui.progressBar(rawVal, vec2(-1, 14), string.format("%.1f%%", rawVal * 100))
 
             ui.text("Trigger Input:")
             ui.sameLine(100)
-            ui.progressBar(inputVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", inputVal * 100))
+            ui.progressBar(inputVal, vec2(-1, 14), string.format("%.1f%%", inputVal * 100))
 
             ui.text("Trigger Smooth:")
             ui.sameLine(100)
-            ui.progressBar(smoothVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", smoothVal * 100))
+            ui.progressBar(smoothVal, vec2(-1, 14), string.format("%.1f%%", smoothVal * 100))
 
             ui.text("Trigger Sensitivity:")
             ui.sameLine(100)
-            ui.progressBar(sensitivityVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", sensitivityVal * 100))
+            ui.progressBar(sensitivityVal, vec2(-1, 14), string.format("%.1f%%", sensitivityVal * 100))
 
             ui.text("Processed Signal:")
             ui.sameLine(100)
-            ui.progressBar(procVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", procVal * 100))
+            ui.progressBar(procVal, vec2(-1, 14), string.format("%.1f%%", procVal * 100))
         else
             ui.text("Waiting for telemetry data...")
         end
