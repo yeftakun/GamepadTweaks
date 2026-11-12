@@ -36,6 +36,7 @@ local state = {
         hysteresisEnable = true, hysteresisThresholdUp = 0.27, hysteresisThresholdDown = 0.23,
         smoothingEnable = true, smoothingTimeConstant = 0.015,
         curve = { enable = true, x = 0.5, y = 0.5 },
+        signalLimitPercent = 100,
         vibration = { enable = true, motor = 0, mode = 0, maxVibrationPercent = 80 }
     }
 }
@@ -54,6 +55,8 @@ local function loadTrigger(cfg, prefix, triggerState)
     triggerState.curve.x, triggerState.curve.y = clampKnee(
         cfg:get(prefix .. '_CURVE', 'X', 0.5),
         cfg:get(prefix .. '_CURVE', 'Y', 0.5))
+
+    triggerState.signalLimitPercent = cfg:get(prefix .. '_SIGNAL_LIMIT', 'MAX', 100)
 
     local defaultMotor = (prefix == 'RT') and 1 or 0
     triggerState.vibration.enable = cfg:get(prefix .. '_VIBRATION', 'ENABLE', true)

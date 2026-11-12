@@ -199,9 +199,9 @@ raw input (trigger fisik)
 
 Setiap tahap harus mempunyai data output yang dapat digunakan oleh Preview untuk debugging.
 
-## Fitur lanjutan: Signal Limit
+## Fitur lanjutan: Signal Limit (diimplementasikan pada v0.3)
 
-Fitur ini dikerjakan setelah tiga bagian utama dan Preview selesai serta sudah diverifikasi.
+Fitur ini sudah diimplementasikan setelah tiga bagian utama dan Preview.
 
 ### Tujuan
 
@@ -211,7 +211,7 @@ Fitur ini ditujukan untuk mobil yang tidak menyediakan pengaturan built-in seper
 
 Nama `Signal Limit` dipilih karena fitur ini hanya membatasi input maksimum sampai persentase tertentu. Istilah `Brake Power` dapat membingungkan karena beberapa mobil bisa menyediakan nilai di atas `100%`, misalnya `Brake Power 120%`.
 
-### Rencana fitur
+### Implementasi fitur
 
 - Jangan tampilkan Signal Limit sebagai bagian global atau sebagai opsi terpisah untuk RT.
 - Tampilkan pengaturan **Signal Limit** hanya ketika pengguna memilih opsi trigger `LT (Brake)`.
@@ -271,4 +271,4 @@ Acceptance criteria:
 3. Memindahkan Preview menjadi bagian mandiri.
 4. Menguji seluruh variabel output pada Vibration Manager.
 5. Memastikan hierarki pipeline dan data preview benar.
-6. Setelah semua stabil, menambahkan Signal Limit hanya di dalam opsi `LT (Brake)`.
+6. Menambahkan Signal Limit hanya di dalam opsi `LT (Brake)`. (Selesai pada v0.3.)

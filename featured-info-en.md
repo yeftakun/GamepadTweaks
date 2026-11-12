@@ -40,15 +40,15 @@ A curve below the straight line (the still-linear signal input) makes the initia
 
 Use this section to check whether the input changes as expected.
 
-## 8. Signal Limit (not written yet)
+## 8. Signal Limit
 
 ### Status
 
-This feature is planned but has not been implemented yet.
+This feature is available and is only shown when `Left Trigger (Brake)` is selected.
 
 ### Description
 
-Signal Limit will be used to limit the maximum brake output. This feature will only be shown when `Left Trigger (Brake)` is selected.
+Signal Limit limits the maximum brake output. The limit is applied after Trigger Sensitivity.
 
 Signal Limit is different from Brake Power. It only cuts the input within the `0–100%` range in a linear or 1:1 manner. A value of `100%` means that no additional limit is applied.
 
@@ -72,4 +72,4 @@ Trigger Sensitivity
 Processed Signal
 ```
 
-Signal Limit will be added after Trigger Sensitivity in a later stage, specifically for LT/brake.
+Signal Limit is applied after Trigger Sensitivity, specifically for LT/brake.

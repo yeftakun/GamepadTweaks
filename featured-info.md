@@ -40,15 +40,15 @@ Kurva di bawah garis lurus (input sinyal yg masih linear) membuat tekanan awal l
 
 Gunakan bagian ini untuk melihat apakah input berubah sesuai harapan.
 
-## 8. Signal Limit (masih blm ditulis)
+## 8. Signal Limit
 
 ### Status
 
-Fitur ini masih direncanakan dan belum diimplementasikan.
+Fitur ini sudah tersedia dan hanya ditampilkan ketika `Left Trigger (Brake)` dipilih.
 
 ### Penjelasan
 
-Signal Limit akan digunakan untuk membatasi output maksimum rem. Fitur ini hanya ditampilkan ketika `Left Trigger (Brake)` dipilih.
+Signal Limit digunakan untuk membatasi output maksimum rem. Nilai batas diterapkan setelah Trigger Sensitivity.
 
 Signal Limit berbeda dari Brake Power. Fitur ini hanya memotong input pada rentang `0–100%` secara linear atau 1:1. Nilai `100%` berarti tidak ada pembatasan tambahan.
 
@@ -72,4 +72,4 @@ Trigger Sensitivity
 Processed Signal
 ```
 
-Signal Limit akan ditambahkan setelah Trigger Sensitivity pada tahap berikutnya, khusus untuk LT/brake.
+Signal Limit diterapkan setelah Trigger Sensitivity, khusus untuk LT/brake.

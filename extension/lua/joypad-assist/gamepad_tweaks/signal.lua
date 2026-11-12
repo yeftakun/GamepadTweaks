@@ -62,6 +62,10 @@ local function createProcessor(triggerId)
         end
 
         local out = math.max(0.0, math.min(1.0, s3))
+        if triggerId == 'lt' then
+            local limit = math.max(0.0, math.min(1.0, (cfg.signalLimitPercent or 100) / 100.0))
+            out = math.min(out, limit)
+        end
         return out, s1, s2, out
     end
 
