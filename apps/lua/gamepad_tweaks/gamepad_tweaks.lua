@@ -378,7 +378,7 @@ function windowMain(dt)
     elseif activeMainTab == "trigger_signal" then
         -- Pilihan Trigger: konteks untuk seluruh pengaturan di tab Trigger Signal
         ui.pushFont(ui.Font.Title)
-        ui.text("Select Trigger to Configure:")
+        ui.text("[TRIGGER] Select to Configure")
         ui.popFont()
         ui.text("Choose a trigger. All settings below apply to the selected trigger.")
 
@@ -508,7 +508,7 @@ function windowMain(dt)
             sectionTitle("Signal Limit", currentTabText)
             infoMarker(SIGNAL_LIMIT_HELP)
             ui.pushItemWidth(vibrationSliderWidth)
-            val, changed = ui.slider("##signal_limit", ts.signalLimitPercent or 100, 0.0, 100.0, "Maximum Brake Output: %.0f%%")
+            val, changed = ui.slider("##signal_limit", ts.signalLimitPercent or 100, 0.0, 100.0, "Maximum Brake Force: %.0f%%")
             ui.popItemWidth()
             if changed then
                 ts.signalLimitPercent = math.max(0.0, math.min(100.0, val))
