@@ -176,12 +176,14 @@ loadConfig()
 local motorLabels = { [0] = "Left (Low Freq)", [1] = "Right (High Freq)" }
 local modeLabels = { [0] = "Proportional", [1] = "Static" }
 local vibrationLevels = { 0, 20, 40, 60, 80, 100 }
+local vibrationSliderWidth = 280
 
-local function renderVibrationLevelSlider(id, label, value, onChanged)
+local function renderVibrationLevelSlider(id, label, value, onChanged, width)
     local changed = false
     ui.pushID(id)
     local level = math.floor(math.max(0, math.min(1, value or 0)) * 5 + 0.5)
     local percent = vibrationLevels[level + 1]
+    ui.pushItemWidth(width or vibrationSliderWidth)
     local sliderValue, sliderChanged = ui.slider(
         "##level",
         level,
@@ -189,6 +191,7 @@ local function renderVibrationLevelSlider(id, label, value, onChanged)
         5,
         string.format("%s: %%.0f", label)
     )
+    ui.popItemWidth()
     ui.sameLine(0, 8)
     ui.text(string.format("(%d%%)", percent))
     if sliderChanged then
@@ -210,6 +213,7 @@ local function renderTriggerVibrationSettings(id, vibration)
     end
 
     ui.sameLine()
+    ui.pushItemWidth(210)
     ui.combo("Motor", motorLabels[vibration.motor] or "Right (High Freq)", ui.ComboFlags.None, function()
         if ui.selectable("Left (Low Freq)", vibration.motor == 0) then
             vibration.motor = 0
@@ -220,7 +224,9 @@ local function renderTriggerVibrationSettings(id, vibration)
             changed = true
         end
     end)
+    ui.popItemWidth()
 
+    ui.pushItemWidth(vibrationSliderWidth)
     ui.combo("Mode", modeLabels[vibration.mode] or "Proportional", ui.ComboFlags.None, function()
         if ui.selectable("Proportional", vibration.mode == 0) then
             vibration.mode = 0
@@ -231,6 +237,7 @@ local function renderTriggerVibrationSettings(id, vibration)
             changed = true
         end
     end)
+    ui.popItemWidth()
 
     if renderVibrationLevelSlider("max", "Max Vibration", vibration.maxVibrationPercent / 100, function(value)
         vibration.maxVibrationPercent = value * 100
@@ -318,7 +325,7 @@ function windowMain(dt)
             ui.sameLine(140)
             if renderVibrationLevelSlider("intensity", "Intensity", state.effects[e.key].mult, function(value)
                 state.effects[e.key].mult = value
-            end) then
+            end, vibrationSliderWidth - 0) then
                 dirty = true
             end
             ui.sameLine()
@@ -484,23 +491,23 @@ function windowMain(dt)
 
             ui.text("Raw Input:")
             ui.sameLine(100)
-            ui.progressBar(rawVal, vec2(-1, 14), string.format("%.1f%%", rawVal * 100))
+            ui.progressBar(rawVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", rawVal * 100))
 
             ui.text("Trigger Input:")
             ui.sameLine(100)
-            ui.progressBar(inputVal, vec2(-1, 14), string.format("%.1f%%", inputVal * 100))
+            ui.progressBar(inputVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", inputVal * 100))
 
             ui.text("Trigger Smooth:")
             ui.sameLine(100)
-            ui.progressBar(smoothVal, vec2(-1, 14), string.format("%.1f%%", smoothVal * 100))
+            ui.progressBar(smoothVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", smoothVal * 100))
 
             ui.text("Trigger Sensitivity:")
             ui.sameLine(100)
-            ui.progressBar(sensitivityVal, vec2(-1, 14), string.format("%.1f%%", sensitivityVal * 100))
+            ui.progressBar(sensitivityVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", sensitivityVal * 100))
 
             ui.text("Processed Signal:")
             ui.sameLine(100)
-            ui.progressBar(procVal, vec2(-1, 14), string.format("%.1f%%", procVal * 100))
+            ui.progressBar(procVal, vec2(vibrationSliderWidth, 14), string.format("%.1f%%", procVal * 100))
         else
             ui.text("Waiting for telemetry data...")
         end
